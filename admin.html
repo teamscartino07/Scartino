@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scartino Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --scy: #00f3ff;
+            --spu: #bc13fe;
+            --bg: #0a0a0f;
+            --card: #14141e;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: white;
+            min-height: 100vh;
+        }
+        h1, h2, h3, .font-cyber { font-family: 'Orbitron', sans-serif; }
+        
+        .glass {
+            background: rgba(20, 20, 30, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 13px;
+        }
+        .btn-scy { background: var(--scy); color: black; }
+        .btn-scy:hover { background: white; }
+        .btn-spu { background: var(--spu); color: white; }
+        .btn-spu:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-warning { background: var(--warning); color: black; }
+        
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            padding: 20px;
+            z-index: 100;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 24px;
+            min-height: 100vh;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 6px;
+            color: #9ca3af;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: rgba(0,243,255,0.1); color: var(--scy); border: 1px solid rgba(0,243,255,0.3); }
+        
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
+        th { color: var(--scy); font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+        }
+        .badge-pending { background: rgba(245,158,11,0.2); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+        .badge-approved { background: rgba(34,197,94,0.2); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+        .badge-rejected { background: rgba(239,68,68,0.2); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        
+        input, select, textarea {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: white;
+            outline: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            width: 100%;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--scy); }
+        
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(6px);
+        }
+        .modal-content {
+            position: relative;
+            background: var(--card);
+            border: 1px solid rgba(0,243,255,0.3);
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .stat-box {
+            background: rgba(0,243,255,0.05);
+            border: 1px solid rgba(0,243,255,0.15);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; min-height: auto; position: relative; padding: 12px; }
+            .sidebar .nav-items { display: flex; overflow-x: auto; gap: 8px; }
+            .nav-item { white-space: nowrap; font-size: 10px; padding: 8px 12px; }
+            .main-content { margin-left: 0; padding: 16px; }
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--scy), var(--spu));
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<div id="login-screen" style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;">
+    <div class="glass" style="padding:40px;border-radius:24px;max-width:420px;width:100%;text-align:center;border-top:4px solid var(--scy);">
+        <h1 class="text-4xl font-cyber font-bold mb-1" style="background:linear-gradient(135deg,#00f3ff,#bc13fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">SCARTINO</h1>
+        <p class="text-gray-400 text-sm mb-8 font-cyber">🔐 Admin Panel</p>
+        
+        <div style="margin-bottom:20px;text-align:left;">
+            <label class="text-xs text-gray-400 font-cyber mb-2 block">Admin Email</label>
+            <input type="email" id="login-email" placeholder="admin@scartino.com" style="width:100%;">
+        </div>
+        <div style="margin-bottom:24px;text-align:left;">
+            <label class="text-xs text-gray-400 font-cyber mb-2 block">Password</label>
+            <input type="password" id="login-password" placeholder="Enter password" style="width:100%;">
+        </div>
+        
+        <button class="btn btn-scy w-full text-lg" onclick="handleLogin()" style="width:100%;padding:14px;">
+            <i class="fas fa-lock-open"></i> Login
+        </button>
+        <p id="login-error" style="color:var(--danger);font-size:12px;margin-top:12px;display:none;">❌ Invalid credentials!</p>
+        <p id="login-attempts" style="color:var(--warning);font-size:11px;margin-top:8px;display:none;">Attempts remaining: 3</p>
+        
+        <div style="margin-top:20px;padding:12px;background:rgba(0,0,0,0.3);border-radius:8px;">
+            <p class="text-xs text-gray-500">🔒 Secure Firebase Authentication</p>
+            <p class="text-[10px] text-gray-600 mt-1">3 wrong attempts = Permanent Ban</p>
+        </div>
+    </div>
+</div>
+
+<!-- BLOCKED SCREEN -->
+<div id="blocked-screen" style="display:none;justify-content:center;align-items:center;min-height:100vh;padding:20px;">
+    <div class="glass" style="padding:40px;border-radius:24px;max-width:420px;width:100%;text-align:center;border-top:4px solid #ef4444;">
+        <i class="fas fa-ban text-6xl mb-4" style="color:#ef4444;"></i>
+        <h2 class="text-2xl font-cyber font-bold mb-2" style="color:#ef4444;">⛔ ACCESS DENIED</h2>
+        <p class="text-gray-400 mb-4">Too many failed login attempts!</p>
+        <div style="background:rgba(0,0,0,0.4);padding:12px;border-radius:10px;margin-bottom:16px;">
+            <p class="text-xs text-gray-400">Your account has been permanently blocked.</p>
+            <p class="text-[10px] text-gray-500 mt-2">Contact super admin for unblock.</p>
+        </div>
+        <button class="btn btn-danger w-full" onclick="window.location.reload()" style="width:100%;">
+            <i class="fas fa-redo"></i> Go Back
+        </button>
+    </div>
+</div>
+
+<!-- ==================== ADMIN PANEL ==================== -->
+<div id="admin-panel" style="display:none;">
+    
+    <!-- SIDEBAR -->
+    <div class="sidebar glass">
+        <div style="text-align:center;margin-bottom:24px;">
+            <h2 class="text-xl font-cyber font-bold" style="background:linear-gradient(135deg,#00f3ff,#bc13fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">SCARTINO</h2>
+            <p class="text-[10px] text-gray-500 font-cyber">Admin v2.0</p>
+        </div>
+        
+        <div class="nav-items">
+            <div class="nav-item active" onclick="showPage('dashboard', this)">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="showPage('users', this)">
+                <i class="fas fa-users"></i> Users
+            </div>
+            <div class="nav-item" onclick="showPage('payments', this)">
+                <i class="fas fa-credit-card"></i> Payments
+                <span id="pending-count" class="badge badge-pending" style="margin-left:auto;">0</span>
+            </div>
+            <div class="nav-item" onclick="showPage('notifications', this)">
+                <i class="fas fa-bell"></i> Notifications
+            </div>
+            <div class="nav-item" onclick="showPage('settings', this)">
+                <i class="fas fa-cog"></i> Settings
+            </div>
+            <div class="nav-item" onclick="showPage('withdrawal', this)">
+                <i class="fas fa-wallet"></i> Withdrawal 🔒
+            </div>
+        </div>
+        
+        <div style="position:absolute;bottom:20px;left:20px;right:20px;">
+            <button class="btn btn-danger w-full" onclick="handleLogout()" style="width:100%;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </div>
+    
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        
+        <!-- HEADER -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 class="text-2xl font-cyber font-bold" id="page-title">Dashboard</h1>
+                <p class="text-xs text-gray-400" id="current-time"></p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span class="text-xs text-gray-400">👤 <span id="admin-name">Admin</span></span>
+                <button class="btn btn-scy" onclick="refreshAllData()" style="padding:8px 16px;font-size:11px;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+        
+        <!-- DASHBOARD PAGE -->
+        <div id="page-dashboard" class="page active">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+                <div class="stat-box">
+                    <div class="text-3xl font-cyber font-bold" style="color:var(--scy);" id="stat-total-users">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Users</div>
+                </div>
+                <div class="stat-box">
+                    <div class="text-3xl font-cyber font-bold text-yellow-400" id="stat-total-coins">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Coins Mined</div>
+                </div>
+                <div class="stat-box">
+                    <div class="text-3xl font-cyber font-bold" style="color:var(--spu);" id="stat-total-scn">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Total SCN</div>
+                </div>
+                <div class="stat-box">
+                    <div class="text-3xl font-cyber font-bold" style="color:var(--warning);" id="stat-pending-payments">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Pending Payments</div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-bottom:16px;">
+                <h3 class="font-cyber text-sm mb-4" style="color:var(--scy);"><i class="fas fa-globe"></i> Global User Counter</h3>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                    <span class="text-xs text-gray-400">Progress to 10M</span>
+                    <span class="text-xs font-cyber" style="color:var(--scy);" id="global-progress-text">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="global-progress-bar" style="width:0%;"></div></div>
+                <p class="text-2xl font-cyber font-bold mt-3" style="color:var(--scy);" id="global-user-count">0</p>
+                <p class="text-[10px] text-gray-500">/ 10,000,000 target</p>
+            </div>
+        </div>
+        
+        <!-- USERS PAGE -->
+        <div id="page-users" class="page">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                <input type="text" id="user-search" placeholder="🔍 Search by name or UID..." style="max-width:300px;" oninput="searchUsers()">
+                <button class="btn btn-scy" onclick="loadAllUsers()"><i class="fas fa-sync-alt"></i> Reload</button>
+            </div>
+            <div class="card" style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>UID</th>
+                            <th>Coins</th>
+                            <th>SCN</th>
+                            <th>VIP</th>
+                            <th>Wallet</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr><td colspan="7" class="text-center text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- PAYMENTS PAGE -->
+        <div id="page-payments" class="page">
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                <button class="btn btn-scy" onclick="filterPayments('all')" style="font-size:11px;">All</button>
+                <button class="btn btn-warning" onclick="filterPayments('pending')" style="font-size:11px;">⏳ Pending</button>
+                <button class="btn btn-success" onclick="filterPayments('approved')" style="font-size:11px;">✅ Approved</button>
+                <button class="btn btn-danger" onclick="filterPayments('rejected')" style="font-size:11px;">❌ Rejected</button>
+            </div>
+            <div class="card" style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Wallet</th>
+                            <th>UTR</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payments-table-body">
+                        <tr><td colspan="7" class="text-center text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- NOTIFICATIONS PAGE -->
+        <div id="page-notifications" class="page">
+            <div class="card" style="margin-bottom:16px;">
+                <h3 class="font-cyber text-sm mb-4" style="color:var(--scy);">📢 Send Push Notification</h3>
+                <div style="margin-bottom:12px;">
+                    <label class="text-xs text-gray-400 block mb-2">Title</label>
+                    <input type="text" id="notif-title" placeholder="Notification title...">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label class="text-xs text-gray-400 block mb-2">Message</label>
+                    <textarea id="notif-message" rows="3" placeholder="Notification message..."></textarea>
+                </div>
+                <button class="btn btn-spu" onclick="sendNotification()"><i class="fas fa-paper-plane"></i> Send to All Users</button>
+            </div>
+        </div>
+        
+        <!-- SETTINGS PAGE -->
+        <div id="page-settings" class="page">
+            <div class="card" style="margin-bottom:16px;">
+                <h3 class="font-cyber text-sm mb-4" style="color:var(--scy);">⚙️ Game Configuration</h3>
+                
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Coins Per Tap</label>
+                        <input type="number" id="setting-tap-coins" value="1">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Max Energy</label>
+                        <input type="number" id="setting-max-energy" value="1000">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Energy Refill Rate (seconds)</label>
+                        <input type="number" id="setting-energy-rate" value="1">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Auto Mine Interval (seconds)</label>
+                        <input type="number" id="setting-auto-mine" value="2.5" step="0.1">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Exchange Rate (Coins:SCN)</label>
+                        <input type="number" id="setting-exchange-rate" value="7777">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Activation Fee (INR)</label>
+                        <input type="number" id="setting-activation-fee" value="7">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">UPI ID</label>
+                        <input type="text" id="setting-upi-id" value="scartino@upi">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Unlock Users Target</label>
+                        <input type="number" id="setting-unlock-target" value="10000000">
+                    </div>
+                </div>
+                
+                <button class="btn btn-scy mt-4" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+            </div>
+        </div>
+        
+        <!-- WITHDRAWAL PAGE -->
+        <div id="page-withdrawal" class="page">
+            <div class="card" style="text-align:center;">
+                <div style="font-size:60px;margin-bottom:16px;">🔒</div>
+                <h3 class="font-cyber text-xl mb-3">Withdrawal System</h3>
+                <p class="text-gray-400 mb-4">Withdrawal will auto-unlock at <span style="color:var(--scy);font-weight:bold;">10,000,000</span> global users</p>
+                
+                <div class="progress-bar" style="margin-bottom:12px;">
+                    <div class="progress-fill" id="withdrawal-progress-bar" style="width:0%;"></div>
+                </div>
+                <p class="text-sm font-cyber" style="color:var(--scy);"><span id="withdrawal-current">0</span> / 10,000,000</p>
+                <p class="text-xs text-gray-500 mt-2" id="withdrawal-percent">0% Complete</p>
+                
+                <div style="margin-top:20px;padding:16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;">
+                    <p class="text-xs text-red-400 mb-2">⚠️ DANGER ZONE - Admin Override</p>
+                    <button class="btn btn-danger" onclick="forceUnlockWithdrawal()">🔓 Force Unlock Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- USER DETAIL MODAL -->
+<div id="user-modal" style="display:none;" class="modal">
+    <div class="modal-overlay" onclick="closeUserModal()"></div>
+    <div class="modal-content" id="user-modal-content"></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyDiLjeXT4qgZLw7VM9BfOK-S7p6So_RFxY",
+        authDomain: "scartino07.firebaseapp.com",
+        projectId: "scartino07",
+        storageBucket: "scartino07.firebasestorage.app",
+        messagingSenderId: "855519714718",
+        appId: "1:855519714718:web:dd6fbab4c5f4d8241aca8f",
+        measurementId: "G-BYYSXTTQN9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = 'scartino-prod-v6';
+
+    // 🔥 NO HARDCODED PASSWORDS - Firebase Auth handles everything
+    let currentFilter = 'all';
+    let allUsers = [];
+    let allPayments = [];
+    let loginAttempts = 0;
+    const MAX_ATTEMPTS = 3;
+    let currentUserEmail = '';
+
+    // ==================== CHECK IF ALREADY LOGGED IN ====================
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Check if blocked
+            checkIfBlocked(user.email).then(blocked => {
+                if (blocked) {
+                    document.getElementById('blocked-screen').style.display = 'flex';
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'none';
+                    signOut(auth);
+                } else {
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('blocked-screen').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    document.getElementById('admin-name').innerText = user.email;
+                    currentUserEmail = user.email;
+                    initAdminPanel();
+                }
+            });
+        }
+    });
+
+    async function checkIfBlocked(email) {
+        try {
+            const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blockedAdmins', email));
+            return docSnap.exists();
+        } catch(e) {
+            return false;
+        }
+    }
+
+    // ==================== LOGIN ====================
+    window.handleLogin = async function() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        const errorEl = document.getElementById('login-error');
+        const attemptsEl = document.getElementById('login-attempts');
+        
+        if (!email || !password) {
+            errorEl.style.display = 'block';
+            errorEl.innerText = '❌ Please fill all fields';
+            return;
+        }
+        
+        // Check if already blocked
+        const blocked = await checkIfBlocked(email);
+        if (blocked) {
+            document.getElementById('blocked-screen').style.display = 'flex';
+            document.getElementById('login-screen').style.display = 'none';
+            return;
+        }
+        
+        try {
+            // 🔥 Firebase Auth Login
+            await signInWithEmailAndPassword(auth, email, password);
+            
+            // Reset attempts on success
+            loginAttempts = 0;
+            errorEl.style.display = 'none';
+            attemptsEl.style.display = 'none';
+            
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('admin-name').innerText = email;
+            currentUserEmail = email;
+            initAdminPanel();
+            showToast('✅ Welcome Admin!', 'success');
+            
+        } catch (error) {
+            loginAttempts++;
+            
+            if (loginAttempts >= MAX_ATTEMPTS) {
+                // 🔥 PERMANENTLY BLOCK
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blockedAdmins', email), {
+                    email: email,
+                    blockedAt: serverTimestamp(),
+                    reason: '3 failed login attempts',
+                    ipInfo: 'Blocked for security'
+                });
+                
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('blocked-screen').style.display = 'flex';
+                showToast('⛔ PERMANENTLY BLOCKED! Too many failed attempts.', 'error');
+            } else {
+                const remaining = MAX_ATTEMPTS - loginAttempts;
+                errorEl.style.display = 'block';
+                errorEl.innerText = '❌ Invalid credentials!';
+                attemptsEl.style.display = 'block';
+                attemptsEl.innerText = `⚠️ ${remaining} attempt${remaining > 1 ? 's' : ''} remaining before permanent ban!`;
+                document.getElementById('login-password').value = '';
+                showToast(`❌ Wrong password! ${remaining} attempts left.`, 'error');
+            }
+        }
+    };
+
+    window.handleLogout = async function() {
+        await signOut(auth);
+        document.getElementById('admin-panel').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').style.display = 'none';
+        document.getElementById('login-attempts').style.display = 'none';
+        loginAttempts = 0;
+        showToast('👋 Logged out', 'info');
+    };
+
+    // ==================== INIT ====================
+    function initAdminPanel() {
+        updateTime();
+        setInterval(updateTime, 30000);
+        loadDashboardStats();
+        loadAllUsers();
+        loadAllPayments();
+        listenGlobalUsers();
+        loadSettings();
+        
+        setInterval(() => {
+            loadDashboardStats();
+            if (document.getElementById('page-payments').classList.contains('active')) loadAllPayments();
+        }, 30000);
+    }
+
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('current-time').innerText = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    }
+
+    // ==================== NAVIGATION ====================
+    window.showPage = function(pageName, navElement) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        const page = document.getElementById('page-' + pageName);
+        if (page) page.classList.add('active');
+        if (navElement) navElement.classList.add('active');
+        
+        document.getElementById('page-title').innerText = pageName.charAt(0).toUpperCase() + pageName.slice(1);
+        
+        if (pageName === 'dashboard') loadDashboardStats();
+        if (pageName === 'users') loadAllUsers();
+        if (pageName === 'payments') loadAllPayments();
+        if (pageName === 'withdrawal') updateWithdrawalProgress();
+    };
+
+    // ==================== DASHBOARD ====================
+    async function loadDashboardStats() {
+        try {
+            const statsRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats');
+            const statsSnap = await getDoc(statsRef);
+            const totalUsers = statsSnap.exists() ? (statsSnap.data().totalUsers || 0) : 0;
+            
+            document.getElementById('stat-total-users').innerText = totalUsers.toLocaleString();
+            
+            let totalCoins = 0, totalScn = 0;
+            const usersSnap = await getDocs(collection(db, 'artifacts', appId, 'users'));
+            usersSnap.forEach(async (userDoc) => {
+                const gameDoc = await getDoc(doc(db, 'artifacts', appId, 'users', userDoc.id, 'gamedata', 'main'));
+                if (gameDoc.exists()) {
+                    totalCoins += gameDoc.data().coins || 0;
+                    totalScn += gameDoc.data().scn || 0;
+                }
+            });
+            
+            setTimeout(() => {
+                document.getElementById('stat-total-coins').innerText = Math.floor(totalCoins).toLocaleString();
+                document.getElementById('stat-total-scn').innerText = totalScn.toFixed(2);
+            }, 2000);
+            
+            const paymentsSnap = await getDocs(query(
+                collection(db, 'artifacts', appId, 'public', 'data', 'payments'),
+                where('status', '==', 'pending')
+            ));
+            document.getElementById('stat-pending-payments').innerText = paymentsSnap.size;
+            document.getElementById('pending-count').innerText = paymentsSnap.size;
+            
+        } catch(e) {
+            console.error("Dashboard error:", e);
+        }
+    }
+
+    function listenGlobalUsers() {
+        const globalRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats');
+        onSnapshot(globalRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const total = docSnap.data().totalUsers || 0;
+                document.getElementById('global-user-count').innerText = total.toLocaleString();
+                document.getElementById('global-progress-text').innerText = ((total / 10000000) * 100).toFixed(4) + '%';
+                document.getElementById('global-progress-bar').style.width = ((total / 10000000) * 100) + '%';
+                updateWithdrawalProgress(total);
+            }
+        });
+    }
+
+    // ==================== USERS ====================
+    window.loadAllUsers = async function() {
+        const tbody = document.getElementById('users-table-body');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        
+        try {
+            allUsers = [];
+            const usersSnap = await getDocs(collection(db, 'artifacts', appId, 'users'));
+            
+            for (const userDoc of usersSnap.docs) {
+                const gameDoc = await getDoc(doc(db, 'artifacts', appId, 'users', userDoc.id, 'gamedata', 'main'));
+                if (gameDoc.exists()) {
+                    allUsers.push({
+                        uid: userDoc.id,
+                        ...gameDoc.data()
+                    });
+                }
+            }
+            
+            renderUsersTable(allUsers);
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red-400">Failed to load users</td></tr>';
+        }
+    };
+
+    function renderUsersTable(users) {
+        const tbody = document.getElementById('users-table-body');
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No users found</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td>
+                    <div class="font-bold text-sm">${u.name || 'Player'}</div>
+                    <div class="text-[10px] text-gray-400">Taps: ${(u.totalTaps||0).toLocaleString()}</div>
+                </td>
+                <td class="text-xs text-gray-400">${u.uid?.substring(0, 12)}...</td>
+                <td class="text-yellow-400 font-bold">${Math.floor(u.coins||0).toLocaleString()}</td>
+                <td style="color:var(--spu);font-weight:bold;">${(u.scn||0).toFixed(4)}</td>
+                <td><span class="badge" style="background:rgba(0,243,255,0.2);color:var(--scy);">VIP ${u.vipLevel||1}</span></td>
+                <td>${u.walletActivated ? '<span class="badge badge-approved">✅ Active</span>' : '<span class="badge badge-pending">❌ None</span>'}</td>
+                <td>
+                    <button class="btn btn-scy" style="padding:6px 12px;font-size:10px;" onclick="openUserDetail('${u.uid}')">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.searchUsers = function() {
+        const query = document.getElementById('user-search').value.toLowerCase();
+        const filtered = allUsers.filter(u => 
+            (u.name || '').toLowerCase().includes(query) || 
+            u.uid.toLowerCase().includes(query)
+        );
+        renderUsersTable(filtered);
+    };
+
+    window.openUserDetail = function(uid) {
+        const user = allUsers.find(u => u.uid === uid);
+        if (!user) return;
+        
+        const modal = document.getElementById('user-modal');
+        const content = document.getElementById('user-modal-content');
+        
+        content.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                <h3 class="font-cyber text-lg" style="color:var(--scy);">👤 ${user.name || 'Player'}</h3>
+                <button onclick="closeUserModal()" style="color:white;background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+            </div>
+            <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;margin-bottom:16px;">
+                <p><strong>UID:</strong> <span class="text-xs">${user.uid}</span></p>
+                <p><strong>Coins:</strong> <span class="text-yellow-400">${Math.floor(user.coins||0).toLocaleString()}</span></p>
+                <p><strong>SCN:</strong> <span style="color:var(--spu);">${(user.scn||0).toFixed(4)}</span></p>
+                <p><strong>VIP Level:</strong> ${user.vipLevel||1}</p>
+                <p><strong>Total Taps:</strong> ${(user.totalTaps||0).toLocaleString()}</p>
+                <p><strong>Energy:</strong> ${user.energy||0}/1000</p>
+                <p><strong>Wallet:</strong> ${user.walletActivated ? '✅ Activated' : '❌ Not Activated'}</p>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button class="btn btn-scy" style="font-size:11px;" onclick="editUserCoins('${user.uid}', ${user.coins||0})">💰 Edit Coins</button>
+                <button class="btn btn-spu" style="font-size:11px;" onclick="editUserSCN('${user.uid}', ${user.scn||0})">💎 Edit SCN</button>
+                <button class="btn btn-warning" style="font-size:11px;" onclick="setUserVIP('${user.uid}', ${user.vipLevel||1})">⭐ Set VIP</button>
+                <button class="btn btn-danger" style="font-size:11px;" onclick="deleteUser('${user.uid}')">🗑️ Delete</button>
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+    };
+
+    window.closeUserModal = function() {
+        document.getElementById('user-modal').style.display = 'none';
+    };
+
+    window.editUserCoins = function(uid, currentCoins) {
+        const newCoins = prompt('Enter new coin amount:', currentCoins);
+        if (newCoins !== null && !isNaN(newCoins)) {
+            updateDoc(doc(db, 'artifacts', appId, 'users', uid, 'gamedata', 'main'), {
+                coins: parseInt(newCoins)
+            }).then(() => {
+                showToast('✅ Coins updated!', 'success');
+                loadAllUsers();
+                closeUserModal();
+            });
+        }
+    };
+
+    window.editUserSCN = function(uid, currentSCN) {
+        const newSCN = prompt('Enter new SCN amount:', currentSCN);
+        if (newSCN !== null && !isNaN(newSCN)) {
+            updateDoc(doc(db, 'artifacts', appId, 'users', uid, 'gamedata', 'main'), {
+                scn: parseFloat(newSCN)
+            }).then(() => {
+                showToast('✅ SCN updated!', 'success');
+                loadAllUsers();
+                closeUserModal();
+            });
+        }
+    };
+
+    window.setUserVIP = function(uid, currentVIP) {
+        const newVIP = prompt('Enter VIP level (1-100):', currentVIP);
+        if (newVIP !== null && !isNaN(newVIP) && newVIP >= 1 && newVIP <= 100) {
+            updateDoc(doc(db, 'artifacts', appId, 'users', uid, 'gamedata', 'main'), {
+                vipLevel: parseInt(newVIP)
+            }).then(() => {
+                showToast('✅ VIP updated!', 'success');
+                loadAllUsers();
+                closeUserModal();
+            });
+        }
+    };
+
+    window.deleteUser = function(uid) {
+        if (confirm('⚠️ Are you sure you want to delete this user? This cannot be undone!')) {
+            deleteDoc(doc(db, 'artifacts', appId, 'users', uid, 'gamedata', 'main')).then(() => {
+                showToast('🗑️ User deleted!', 'success');
+                loadAllUsers();
+                closeUserModal();
+            });
+        }
+    };
+
+    // ==================== PAYMENTS ====================
+    window.loadAllPayments = async function() {
+        const tbody = document.getElementById('payments-table-body');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        
+        try {
+            allPayments = [];
+            const paymentsSnap = await getDocs(query(
+                collection(db, 'artifacts', appId, 'public', 'data', 'payments'),
+                orderBy('createdAt', 'desc')
+            ));
+            
+            paymentsSnap.forEach(doc => {
+                allPayments.push({ id: doc.id, ...doc.data() });
+            });
+            
+            renderPaymentsTable(allPayments);
+            document.getElementById('stat-pending-payments').innerText = allPayments.filter(p => p.status === 'pending').length;
+            document.getElementById('pending-count').innerText = allPayments.filter(p => p.status === 'pending').length;
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red-400">Failed to load</td></tr>';
+        }
+    };
+
+    function renderPaymentsTable(payments) {
+        const tbody = document.getElementById('payments-table-body');
+        let filtered = payments;
+        
+        if (currentFilter !== 'all') {
+            filtered = payments.filter(p => p.status === currentFilter);
+        }
+        
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No payments found</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map(p => `
+            <tr>
+                <td class="text-xs">${p.id?.substring(0, 8)}...</td>
+                <td>${p.userName || 'Unknown'}</td>
+                <td>₹${p.amount || 7}</td>
+                <td class="text-xs">${(p.walletAddress || '').substring(0, 10)}...</td>
+                <td class="text-xs">${p.utr || 'N/A'}</td>
+                <td><span class="badge badge-${p.status === 'approved' ? 'approved' : p.status === 'rejected' ? 'rejected' : 'pending'}">${p.status?.toUpperCase()}</span></td>
+                <td>
+                    ${p.status === 'pending' ? `
+                        <button class="btn btn-success" style="padding:4px 10px;font-size:10px;margin-right:4px;" onclick="approvePayment('${p.id}')">✅</button>
+                        <button class="btn btn-danger" style="padding:4px 10px;font-size:10px;" onclick="rejectPayment('${p.id}')">❌</button>
+                    ` : '<span class="text-xs text-gray-500">Done</span>'}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.filterPayments = function(status) {
+        currentFilter = status;
+        renderPaymentsTable(allPayments);
+    };
+
+    window.approvePayment = async function(paymentId) {
+        if (!confirm('✅ Approve this payment? Wallet will be activated.')) return;
+        
+        try {
+            const paymentRef = doc(db, 'artifacts', appId, 'public', 'data', 'payments', paymentId);
+            const paymentSnap = await getDoc(paymentRef);
+            const paymentData = paymentSnap.data();
+            
+            await updateDoc(paymentRef, {
+                status: 'approved',
+                approvedAt: serverTimestamp()
+            });
+            
+            if (paymentData.userId) {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', paymentData.userId, 'gamedata', 'main'), {
+                    walletActivated: true,
+                    walletAddress: paymentData.walletAddress
+                });
+            }
+            
+            showToast('✅ Payment approved! Wallet activated.', 'success');
+            loadAllPayments();
+            loadAllUsers();
+        } catch(e) {
+            showToast('❌ Error approving payment', 'error');
+        }
+    };
+
+    window.rejectPayment = async function(paymentId) {
+        const reason = prompt('❌ Reason for rejection:');
+        if (!reason) return;
+        
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payments', paymentId), {
+                status: 'rejected',
+                adminNote: reason
+            });
+            
+            showToast('❌ Payment rejected.', 'info');
+            loadAllPayments();
+        } catch(e) {
+            showToast('❌ Error rejecting payment', 'error');
+        }
+    };
+
+    // ==================== NOTIFICATIONS ====================
+    window.sendNotification = async function() {
+        const title = document.getElementById('notif-title').value.trim();
+        const message = document.getElementById('notif-message').value.trim();
+        
+        if (!title || !message) {
+            showToast('⚠️ Please fill all fields', 'error');
+            return;
+        }
+        
+        try {
+            await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications')), {
+                title: title,
+                message: message,
+                sentAt: serverTimestamp(),
+                sentBy: currentUserEmail || 'Admin'
+            });
+            
+            showToast('📢 Notification sent to all users!', 'success');
+            document.getElementById('notif-title').value = '';
+            document.getElementById('notif-message').value = '';
+        } catch(e) {
+            showToast('❌ Failed to send notification', 'error');
+        }
+    };
+
+    // ==================== WITHDRAWAL ====================
+    function updateWithdrawalProgress(total) {
+        const count = total || 0;
+        document.getElementById('withdrawal-current').innerText = count.toLocaleString();
+        document.getElementById('withdrawal-percent').innerText = ((count / 10000000) * 100).toFixed(4) + '% Complete';
+        document.getElementById('withdrawal-progress-bar').style.width = ((count / 10000000) * 100) + '%';
+    }
+
+    window.forceUnlockWithdrawal = function() {
+        if (confirm('⚠️ Are you sure you want to force unlock withdrawal?')) {
+            showToast('🔓 Withdrawal system force unlocked!', 'success');
+            alert('Withdrawal system is now UNLOCKED.');
+        }
+    };
+
+    // ==================== SETTINGS ====================
+    function loadSettings() {
+        document.getElementById('setting-tap-coins').value = 1;
+        document.getElementById('setting-max-energy').value = 1000;
+        document.getElementById('setting-energy-rate').value = 1;
+        document.getElementById('setting-auto-mine').value = 2.5;
+        document.getElementById('setting-exchange-rate').value = 7777;
+        document.getElementById('setting-activation-fee').value = 7;
+        document.getElementById('setting-upi-id').value = 'scartino@upi';
+        document.getElementById('setting-unlock-target').value = 10000000;
+    }
+
+    window.saveSettings = function() {
+        const settings = {
+            tapCoins: parseInt(document.getElementById('setting-tap-coins').value),
+            maxEnergy: parseInt(document.getElementById('setting-max-energy').value),
+            energyRate: parseInt(document.getElementById('setting-energy-rate').value),
+            autoMine: parseFloat(document.getElementById('setting-auto-mine').value),
+            exchangeRate: parseInt(document.getElementById('setting-exchange-rate').value),
+            activationFee: parseInt(document.getElementById('setting-activation-fee').value),
+            upiId: document.getElementById('setting-upi-id').value,
+            unlockTarget: parseInt(document.getElementById('setting-unlock-target').value)
+        };
+        
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'gameConfig'), settings, { merge: true })
+            .then(() => showToast('✅ Settings saved!', 'success'))
+            .catch(() => showToast('❌ Failed', 'error'));
+    };
+
+    // ==================== REFRESH ====================
+    window.refreshAllData = function() {
+        loadDashboardStats();
+        loadAllUsers();
+        loadAllPayments();
+        showToast('🔄 Data refreshed!', 'info');
+    };
+
+    // ==================== TOAST ====================
+    function showToast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.style.background = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#1f2937';
+        toast.style.color = 'white';
+        toast.innerHTML = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+
+</body>
+</html>

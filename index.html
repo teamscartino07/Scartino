@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Scartino - Premium Tap to Earn</title>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { scy: '#00f3ff', spu: '#bc13fe', sbg: '#0a0a0f' },
+                    fontFamily: { orbitron: ['Orbitron', 'sans-serif'], inter: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, increment, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiLjeXT4qgZLw7VM9BfOK-S7p6So_RFxY",
+            authDomain: "scartino07.firebaseapp.com",
+            projectId: "scartino07",
+            storageBucket: "scartino07.firebasestorage.app",
+            messagingSenderId: "855519714718",
+            appId: "1:855519714718:web:dd6fbab4c5f4d8241aca8f",
+            measurementId: "G-BYYSXTTQN9"
+        };
+        const appIdString = 'scartino-prod-v6';
+        const app = initializeApp(firebaseConfig);
+        window.firebaseApp = { auth: getAuth(app), db: getFirestore(app), appId: appIdString };
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0; left: 0;
+        }
+        h1, h2, h3, .font-cyber { font-family: 'Orbitron', sans-serif; }
+        
+        .glass {
+            background: rgba(20, 20, 30, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+        }
+        
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 25px rgba(0,243,255,0.3); }
+            50% { box-shadow: 0 0 50px rgba(188,19,254,0.7); }
+            100% { box-shadow: 0 0 25px rgba(0,243,255,0.3); }
+        }
+        @keyframes shake {
+            0% { transform: translate(1px,1px) rotate(0deg); }
+            10% { transform: translate(-1px,-2px) rotate(-1deg); }
+            20% { transform: translate(-3px,0px) rotate(1deg); }
+            30% { transform: translate(3px,2px) rotate(0deg); }
+            40% { transform: translate(1px,-1px) rotate(1deg); }
+            50% { transform: translate(-1px,2px) rotate(-1deg); }
+            60% { transform: translate(-3px,1px) rotate(0deg); }
+            70% { transform: translate(3px,1px) rotate(-1deg); }
+            80% { transform: translate(-1px,-1px) rotate(1deg); }
+            90% { transform: translate(1px,2px) rotate(0deg); }
+            100% { transform: translate(1px,-2px) rotate(-1deg); }
+        }
+        .shake-active { animation: shake 0.18s cubic-bezier(.36,.07,.19,.97) both !important; }
+        
+        .main-coin-container {
+            width: 200px; height: 200px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1e1e30, #0a0a14);
+            display: flex; justify-content: center; align-items: center;
+            animation: pulse-glow 3s infinite alternate;
+            cursor: pointer; transition: transform 0.1s;
+            box-shadow: 0 0 30px rgba(0,243,255,0.2); flex-shrink: 0;
+        }
+        .main-coin-container:active { transform: scale(0.93); }
+        .coin-inner {
+            width: 88%; height: 88%; border-radius: 50%;
+            background: linear-gradient(135deg, #00f3ff, #bc13fe);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.8);
+        }
+        .coin-logo {
+            font-size: 4rem; color: white;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+            font-family: 'Orbitron', sans-serif; font-weight: 900;
+        }
+        
+        .floating-text {
+            position: fixed; color: #00f3ff; font-weight: bold; font-size: 22px;
+            pointer-events: none; z-index: 9999; font-family: 'Orbitron', sans-serif;
+            animation: float-up 1s ease-out forwards; text-shadow: 0 0 8px #00f3ff;
+        }
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-90px) scale(1.5); opacity: 0; }
+        }
+        
+        #app-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 64px; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+        }
+        #bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 72px; z-index: 100;
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        #main-content {
+            position: fixed; top: 64px; bottom: 72px;
+            left: 0; right: 0; overflow-y: auto; overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        #main-content::-webkit-scrollbar { display: none; }
+        
+        .view-section { display: none !important; min-height: 100%; padding: 16px; padding-bottom: 30px; }
+        .view-section.active { display: block !important; }
+        
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            color: #6b7280; font-size: 10px; font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s; cursor: pointer; padding: 8px 12px;
+        }
+        .nav-item.active { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; transform: translateY(-3px); }
+        .nav-item i { font-size: 20px; margin-bottom: 4px; }
+        
+        .progress-bar { background: rgba(255,255,255,0.08); border-radius: 10px; height: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00f3ff, #bc13fe); transition: width 0.3s ease; }
+        .vip-fill { height: 100%; background: linear-gradient(90deg, #facc15, #00f3ff); transition: width 0.4s ease; }
+        
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 15px; }
+        .mine-cell {
+            background: #1e293b; border-radius: 8px; height: 48px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; cursor: pointer; border: 2px solid #334155; transition: all 0.2s;
+        }
+        .mine-cell.revealed-safe { background: #00f3ff; border-color: #00f3ff; color: #000; }
+        .mine-cell.revealed-mine { background: #bc13fe; border-color: #bc13fe; }
+        
+        .toast-item { animation: slideDown 0.3s ease; }
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .admin-btn {
+            position: fixed; bottom: 90px; right: 16px; z-index: 99;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(0,0,0,0.6); border: 2px solid rgba(0,243,255,0.4);
+            color: #00f3ff; font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s; opacity: 0.5;
+        }
+        .admin-btn:hover { opacity: 1; border-color: #00f3ff; }
+    </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0f;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+    <h1 style="font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:bold;background:linear-gradient(135deg,#00f3ff,#bc13fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;">SCARTINO</h1>
+    <i class="fas fa-circle-notch fa-spin text-4xl" style="color:#00f3ff;"></i>
+    <p class="mt-4 text-sm text-gray-400" style="font-family:'Orbitron',sans-serif;">Loading game...</p>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;width:90%;max-width:350px;pointer-events:none;"></div>
+
+<!-- Coming Soon Modal -->
+<div id="comingsoon-modal" style="display:none;position:fixed;inset:0;z-index:9999;justify-content:center;align-items:center;padding:16px;">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.85);" onclick="document.getElementById('comingsoon-modal').style.display='none'"></div>
+    <div class="glass" style="position:relative;width:100%;max-width:380px;border-radius:16px;padding:24px;border-top:4px solid #00f3ff;text-align:center;">
+        <i class="fas fa-clock text-5xl mb-4" style="color:#bc13fe;"></i>
+        <h2 class="text-xl font-cyber font-bold mb-2">Wallet Activation</h2>
+        <p class="text-sm text-gray-300 mb-2">🚀 Coming Soon</p>
+        <p class="text-xs text-gray-400 mb-6">Unlocks at <span style="color:#00f3ff;font-weight:bold;">10,000,000</span> players</p>
+        <div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:12px;margin-bottom:16px;">
+            <span class="text-[10px] text-gray-400 block">CURRENT PLAYERS</span>
+            <span id="global-count-modal" class="text-2xl font-cyber font-bold" style="color:#00f3ff;">0</span>
+        </div>
+        <button class="w-full py-3 rounded-lg font-cyber font-bold" style="background:#00f3ff;color:black;" onclick="document.getElementById('comingsoon-modal').style.display='none'">Got It</button>
+    </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" style="display:none;width:100%;height:100vh;position:relative;">
+
+    <!-- HEADER -->
+    <header id="app-header" class="glass">
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="appState.navigateTo('profile')">
+            <img id="user-avatar" src="https://ui-avatars.com/api/?name=U&background=00f3ff&color=000" style="width:38px;height:38px;border-radius:50%;border:2px solid #00f3ff;">
+            <div>
+                <div id="user-name" class="text-sm font-cyber font-bold">Player</div>
+                <div class="text-[10px] font-cyber" style="color:#00f3ff;">VIP <span id="header-vip">1</span></div>
+            </div>
+        </div>
+        <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                <span class="text-[9px] text-gray-400 font-cyber">COINS</span>
+                <span class="text-sm font-bold text-yellow-400 font-cyber"><i class="fas fa-coins text-xs"></i> <span id="header-coins">0</span></span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                <span class="text-[9px] text-gray-400 font-cyber">SCN</span>
+                <span class="text-sm font-bold font-cyber" style="color:#bc13fe;"><i class="fas fa-gem text-xs"></i> <span id="header-scn">0.0000</span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div id="main-content">
+        
+        <!-- HOME -->
+        <section id="view-home" class="view-section active" style="display:flex;flex-direction:column;align-items:center;">
+            <div class="w-full glass-card p-3 mt-2 mb-3">
+                <div class="flex justify-between items-center text-xs font-cyber font-bold mb-2" style="color:#00f3ff;">
+                    <span><i class="fas fa-crown"></i> VIP <span id="ui-vip-level">1</span></span>
+                    <span><span id="ui-vip-progress">0</span> / <span id="ui-vip-max">2000</span> XP</span>
+                </div>
+                <div class="progress-bar w-full" style="background:rgba(0,0,0,0.5);"><div id="vip-bar-fill" class="vip-fill" style="width:0%;"></div></div>
+                <p class="text-[9px] text-gray-400 mt-2 text-center font-cyber">Max VIP: 100</p>
+            </div>
+            
+            <div class="text-3xl font-cyber font-bold mb-4 text-white flex items-center gap-3">
+                <i class="fas fa-coins text-yellow-400"></i> <span id="main-balance">0</span>
+            </div>
+            
+            <div style="display:flex;justify-content:center;width:100%;margin-bottom:16px;">
+                <div id="tap-area" class="main-coin-container"><div class="coin-inner"><span class="coin-logo">S</span></div></div>
+            </div>
+            
+            <div class="w-full mt-2">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <div class="text-sm font-cyber font-bold flex items-center gap-2" style="color:#00f3ff;">
+                        <i class="fas fa-bolt"></i> <span id="ui-energy">1000</span> / 1000
+                    </div>
+                    <div class="text-[10px] bg-white/10 px-3 py-1 rounded-full font-cyber text-gray-300">+1/2.5s auto</div>
+                </div>
+                <div class="progress-bar w-full"><div id="energy-bar" class="progress-fill" style="width:100%;"></div></div>
+            </div>
+        </section>
+
+        <!-- TASKS -->
+        <section id="view-tasks" class="view-section">
+            <h2 class="text-2xl font-cyber font-bold mb-4 text-center mt-2">Daily Missions</h2>
+            <div class="glass-card p-4 mb-6 flex justify-between items-center" style="background:rgba(30,58,138,0.3);">
+                <div class="flex items-center gap-3"><i class="fas fa-play-circle text-3xl animate-pulse" style="color:#00f3ff;"></i><div><div class="font-bold font-cyber text-sm">Watch Ad</div><div class="text-xs text-yellow-400">+500 Coins</div></div></div>
+                <button id="btn-watch-ad" class="px-4 py-2 rounded font-bold font-cyber text-xs" style="background:#00f3ff;color:black;" onclick="appState.watchAd()">Watch</button>
+            </div>
+            <h3 class="font-bold text-white mb-3 font-cyber">Social Tasks</h3>
+            <div class="flex flex-col gap-3" id="tasks-list"></div>
+            <h3 class="font-bold mb-3 font-cyber mt-6" style="color:#00f3ff;"><i class="fas fa-user-plus"></i> Invite</h3>
+            <div class="flex flex-col gap-2 mb-4" id="invite-tasks-list"></div>
+            <button class="w-full text-white py-3 rounded-lg font-cyber font-bold mb-6" style="background:#bc13fe;" onclick="appState.copyRef()">Copy Invite Link</button>
+        </section>
+
+        <!-- ARCADE -->
+        <section id="view-games" class="view-section">
+            <h2 class="text-2xl font-cyber font-bold mb-4 text-center mt-2" style="color:#00f3ff;">Arcade</h2>
+            <div id="arcade-menu" class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-4 flex flex-col items-center text-center cursor-pointer" onclick="minesGame.showMenu()"><i class="fas fa-th text-4xl mb-2" style="color:#bc13fe;"></i><h3 class="font-cyber font-bold text-sm">Mines</h3></div>
+                <div class="glass-card p-4 flex flex-col items-center text-center cursor-pointer" onclick="memoryGame.start()"><i class="fas fa-brain text-4xl mb-2" style="color:#00f3ff;"></i><h3 class="font-cyber font-bold text-sm">Memory</h3></div>
+            </div>
+            <div id="mines-game-container" style="display:none;" class="glass p-4 rounded-xl mt-4">
+                <div class="flex justify-between mb-4"><h3 class="font-cyber font-bold">Mines</h3><button onclick="minesGame.close()" class="text-gray-400"><i class="fas fa-times"></i></button></div>
+                <div id="mines-setup"><div class="mb-4"><label class="text-xs text-gray-400">Mines (1-24)</label><input type="number" id="mines-count" value="3" min="1" max="24" class="w-full bg-black/50 border border-white/20 rounded p-2 text-white font-cyber outline-none"></div><button class="w-full py-3 rounded font-cyber font-bold" style="background:#00f3ff;color:black;" onclick="minesGame.start()">Play (100 Coins)</button></div>
+                <div id="mines-active" style="display:none;"><div class="flex justify-between bg-black/50 p-2 rounded mb-2 font-cyber text-sm"><div>Mult: <span id="mine-mult" style="color:#00f3ff;">1.0x</span></div><div>Win: <span id="mine-profit" class="text-yellow-400">0</span></div></div><button id="btn-cashout" class="w-full text-white py-2 rounded font-cyber font-bold mb-2 opacity-50" style="background:#bc13fe;" disabled onclick="minesGame.cashout()">Cash Out</button><div id="mines-board" class="mines-grid"></div></div>
+            </div>
+            <div id="memory-game-container" style="display:none;" class="glass p-4 rounded-xl mt-4"><div class="flex justify-between mb-4"><h3 class="font-cyber font-bold">Memory</h3><button onclick="memoryGame.close()" class="text-gray-400"><i class="fas fa-times"></i></button></div><div id="memory-board" class="grid grid-cols-4 gap-2"></div></div>
+        </section>
+
+        <!-- WALLET -->
+        <section id="view-wallet" class="view-section">
+            <div class="glass p-5 rounded-xl mt-4 text-center">
+                <i class="fas fa-wallet text-4xl mb-3" style="color:#00f3ff;"></i>
+                <h2 class="text-xl font-cyber font-bold mb-2">Web3 Wallet</h2>
+                <p class="text-sm text-gray-300 mb-4">Activate wallet & withdraw</p>
+                <div style="background:rgba(0,0,0,0.4);padding:12px;border-radius:12px;margin-bottom:16px;">
+                    <p class="text-xs text-gray-400">Global Players</p>
+                    <span id="global-count-wallet" class="text-2xl font-cyber font-bold" style="color:#00f3ff;">0</span>
+                </div>
+                <button class="w-full py-3 rounded-lg font-cyber font-bold" style="background:#00f3ff;color:black;" onclick="document.getElementById('comingsoon-modal').style.display='flex'">Activate Wallet</button>
+            </div>
+            <div class="glass-card p-4 mt-6">
+                <h3 class="font-cyber text-sm mb-3" style="color:#00f3ff;"><i class="fas fa-exchange-alt"></i> Convert Coins → SCN</h3>
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="number" id="exchange-input" placeholder="Coins" class="w-full bg-black/50 border border-white/10 p-2 rounded text-white font-cyber text-sm outline-none" oninput="appState.calcExchange()">
+                    <button class="bg-white/10 px-3 py-2 rounded text-xs font-cyber text-white" onclick="document.getElementById('exchange-input').value=Math.floor(appState.data.coins);appState.calcExchange();">MAX</button>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-400">Get: <span id="exchange-preview" style="color:#00f3ff;">0.00000</span> SCN</span>
+                    <button class="px-4 py-2 rounded font-cyber font-bold text-xs" style="background:#00f3ff;color:black;" onclick="appState.executeExchange()">Convert</button>
+                </div>
+                <p class="text-[9px] text-gray-500 mt-2">7777 Coins = 1 SCN</p>
+            </div>
+        </section>
+
+        <!-- LEADERBOARD -->
+        <section id="view-leaderboard" class="view-section">
+            <h2 class="text-2xl font-cyber font-bold mb-6 text-center mt-2" style="color:#00f3ff;">Top Tappers</h2>
+            <div class="bg-black/40 rounded-xl p-2" id="leaderboard-list"><div class="text-center p-4 text-gray-500">Loading...</div></div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="view-profile" class="view-section">
+            <div class="glass p-6 rounded-xl flex flex-col items-center mt-4">
+                <img id="profile-avatar" src="" style="width:80px;height:80px;border-radius:50%;border:2px solid #00f3ff;margin-bottom:16px;">
+                <h2 id="profile-name" class="text-xl font-cyber font-bold">Player</h2>
+                <div class="px-3 py-1 rounded-full text-xs font-cyber border mt-2 mb-4" style="background:rgba(0,243,255,0.2);color:#00f3ff;">VIP <span id="profile-vip">1</span></div>
+                <div class="w-full grid grid-cols-2 gap-2 text-center font-cyber">
+                    <div class="bg-black/50 p-3 rounded"><div class="text-[10px] text-gray-400">Taps</div><div id="stat-taps" style="color:#00f3ff;">0</div></div>
+                    <div class="bg-black/50 p-3 rounded"><div class="text-[10px] text-gray-400">Earned</div><div id="stat-earned" class="text-yellow-400">0</div></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav id="bottom-nav" class="glass">
+        <div class="nav-item active" data-target="home"><i class="fas fa-home"></i><span>Tap</span></div>
+        <div class="nav-item" data-target="tasks"><i class="fas fa-tasks"></i><span>Tasks</span></div>
+        <div class="nav-item" data-target="games"><i class="fas fa-gamepad"></i><span>Arcade</span></div>
+        <div class="nav-item" data-target="wallet"><i class="fas fa-wallet"></i><span>Wallet</span></div>
+        <div class="nav-item" data-target="leaderboard"><i class="fas fa-trophy"></i><span>Top</span></div>
+    </nav>
+    
+    <!-- 🔥 Admin Shield Button - Redirects to Admin Panel -->
+    <button class="admin-btn" onclick="goToAdminPanel()" title="Admin Panel">
+        <i class="fas fa-shield-alt"></i>
+    </button>
+</div>
+
+<script type="module">
+    import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { doc, setDoc, getDoc, collection, getDocs, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const { auth, db, appId } = window.firebaseApp;
+
+    // ⚙️ CONFIG (No passwords here - all in Firebase)
+    const CONFIG = {
+        EXCHANGE_RATE: 7777,
+        MAX_ENERGY: 1000,
+        AUTO_MINE_MS: 2500,   // 2.5 seconds auto mine
+        ENERGY_REGEN_MS: 1000, // 1 second energy refill
+        VIP_LEVELS: Array.from({length: 100}, (_, i) => ({ level: i+1, xpReq: i * 2000 }))
+    };
+
+    // 🔥 Admin Panel Redirect Function
+    window.goToAdminPanel = function() {
+        // Admin panel page path (same folder)
+        window.location.href = 'admin.html';
+    };
+
+    // Toast function
+    window.showToast = function(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if(!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast-item p-3 rounded border font-cyber text-sm text-white shadow-lg';
+        toast.style.background = type === 'error' ? 'rgba(185,28,28,0.9)' : 'rgba(31,41,55,0.9)';
+        toast.style.borderColor = type === 'error' ? '#ef4444' : '#00f3ff';
+        toast.style.pointerEvents = 'auto';
+        toast.innerHTML = msg;
+        container.appendChild(toast);
+        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 2500);
+    };
+
+    // ==================== APP STATE ====================
+    window.appState = {
+        user: null, tgUser: null,
+        data: { coins: 0, scn: 0, energy: 1000, totalCoinsEarned: 0, vipLevel: 1, totalTaps: 0, completedTasks: [] },
+        syncPending: false,
+        intervals: { autoMine: null, energyRegen: null, save: null },
+        initialized: false,
+
+        init: async function() {
+            if(this.initialized) return;
+            this.initialized = true;
+            
+            this.initTelegram();
+            
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, async (user) => {
+                    if (user && !this.user) {
+                        this.user = user;
+                        console.log('✅ User authenticated:', user.uid);
+                        await this.loadData();
+                        this.listenGlobal();
+                        this.startLoops();
+                        this.hideLoader();
+                        this.updateUI();
+                        this.renderTasks();
+                    }
+                });
+            } catch(e) {
+                console.error('Auth error:', e);
+                this.hideLoader();
+                showToast('Connection error. Please reload.', 'error');
+            }
+        },
+
+        initTelegram: function() {
+            const tg = window.Telegram?.WebApp;
+            if (tg) { 
+                tg.ready(); 
+                tg.expand();
+                if(tg.initDataUnsafe?.user) this.tgUser = tg.initDataUnsafe.user;
+            }
+            if (!this.tgUser) {
+                this.tgUser = { id: 'guest_' + Date.now(), first_name: 'Player' };
+            }
+        },
+
+        loadData: async function() {
+            try {
+                const ref = doc(db, 'artifacts', appId, 'users', this.user.uid, 'gamedata', 'main');
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    const d = snap.data();
+                    this.data.coins = d.coins || 0;
+                    this.data.scn = d.scn || 0;
+                    this.data.energy = d.energy ?? CONFIG.MAX_ENERGY;
+                    this.data.totalCoinsEarned = d.totalCoinsEarned || 0;
+                    this.data.vipLevel = d.vipLevel || 1;
+                    this.data.totalTaps = d.totalTaps || 0;
+                    this.data.completedTasks = d.completedTasks || [];
+                } else {
+                    await setDoc(ref, this.data);
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats'), 
+                            { totalUsers: increment(1) }, { merge: true });
+                    } catch(e) {}
+                }
+                document.getElementById('profile-name').innerText = this.tgUser.first_name || 'Player';
+                document.getElementById('user-name').innerText = this.tgUser.first_name || 'Player';
+                if(this.tgUser.photo_url) {
+                    document.getElementById('user-avatar').src = this.tgUser.photo_url;
+                    document.getElementById('profile-avatar').src = this.tgUser.photo_url;
+                }
+                this.checkVIP();
+                console.log('✅ Data loaded - Coins:', this.data.coins, 'Energy:', this.data.energy);
+            } catch(e) {
+                console.error('Load error:', e);
+            }
+        },
+
+        listenGlobal: function() {
+            try {
+                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats');
+                onSnapshot(globalRef, (snap) => {
+                    const total = snap.exists() ? (snap.data().totalUsers || 0) : 0;
+                    const el1 = document.getElementById('global-count-modal');
+                    const el2 = document.getElementById('global-count-wallet');
+                    if(el1) el1.innerText = total.toLocaleString();
+                    if(el2) el2.innerText = total.toLocaleString();
+                }, (err) => console.log('Global listener error:', err));
+            } catch(e) {}
+        },
+
+        saveData: async function() {
+            if (!this.user || !this.syncPending) return;
+            try {
+                const ref = doc(db, 'artifacts', appId, 'users', this.user.uid, 'gamedata', 'main');
+                await setDoc(ref, {
+                    coins: this.data.coins,
+                    scn: this.data.scn,
+                    energy: this.data.energy,
+                    totalCoinsEarned: this.data.totalCoinsEarned,
+                    vipLevel: this.data.vipLevel,
+                    totalTaps: this.data.totalTaps,
+                    completedTasks: this.data.completedTasks
+                }, { merge: true });
+                this.syncPending = false;
+            } catch(e) {
+                console.log('Save error:', e);
+            }
+        },
+
+        handleTap: function(e) {
+            if (this.data.energy < 1) {
+                showToast('⚡ No energy! Wait for refill.', 'error');
+                return;
+            }
+            if (navigator.vibrate) navigator.vibrate(30);
+            
+            const tap = document.getElementById('tap-area');
+            if(tap) {
+                tap.classList.remove('shake-active');
+                void tap.offsetWidth;
+                tap.classList.add('shake-active');
+            }
+            
+            this.data.energy--;
+            this.addCoins(1);
+            this.data.totalTaps++;
+            this.syncPending = true;
+            
+            this.updateUI();
+            
+            let x = window.innerWidth / 2;
+            let y = window.innerHeight / 3;
+            if (e?.touches?.[0]) { x = e.touches[0].clientX; y = e.touches[0].clientY; }
+            else if (e?.clientX) { x = e.clientX; y = e.clientY; }
+            this.spawnText('+1', x, y);
+        },
+
+        addCoins: function(amount) {
+            this.data.coins += amount;
+            this.data.totalCoinsEarned += amount;
+            this.checkVIP();
+        },
+
+        startLoops: function() {
+            // Clear existing intervals
+            if (this.intervals.autoMine) clearInterval(this.intervals.autoMine);
+            if (this.intervals.energyRegen) clearInterval(this.intervals.energyRegen);
+            if (this.intervals.save) clearInterval(this.intervals.save);
+            
+            // 🔥 AUTO MINE: +1 coin every 2.5 seconds
+            this.intervals.autoMine = setInterval(() => {
+                if (this.user) {
+                    this.addCoins(1);
+                    this.syncPending = true;
+                    this.updateUI();
+                }
+            }, CONFIG.AUTO_MINE_MS);
+            
+            // 🔥 ENERGY REGEN: +1 energy every 1 second
+            this.intervals.energyRegen = setInterval(() => {
+                if (this.user && this.data.energy < CONFIG.MAX_ENERGY) {
+                    this.data.energy++;
+                    this.syncPending = true;
+                    this.updateEnergyBar();
+                }
+            }, CONFIG.ENERGY_REGEN_MS);
+            
+            // Auto save every 5 seconds
+            this.intervals.save = setInterval(() => {
+                if (this.syncPending && this.user) {
+                    this.saveData();
+                }
+            }, 5000);
+            
+            console.log('✅ Loops started');
+            console.log('  - Auto Mine: every', CONFIG.AUTO_MINE_MS/1000, 'seconds');
+            console.log('  - Energy Regen: every', CONFIG.ENERGY_REGEN_MS/1000, 'second');
+        },
+
+        checkVIP: function() {
+            let newLevel = 1;
+            for(let i = CONFIG.VIP_LEVELS.length - 1; i >= 0; i--) {
+                if(this.data.totalCoinsEarned >= CONFIG.VIP_LEVELS[i].xpReq) {
+                    newLevel = CONFIG.VIP_LEVELS[i].level;
+                    break;
+                }
+            }
+            if(newLevel > this.data.vipLevel) {
+                const levelsGained = newLevel - this.data.vipLevel;
+                this.data.scn += levelsGained * 0.1;
+                this.data.vipLevel = newLevel;
+                this.syncPending = true;
+                showToast(`🎉 VIP ${newLevel}! +${(levelsGained * 0.1).toFixed(1)} SCN`, 'success');
+            }
+            this.updateVIPUI();
+        },
+
+        calcExchange: function() {
+            const input = document.getElementById('exchange-input');
+            const preview = document.getElementById('exchange-preview');
+            if(!input || !preview) return;
+            const val = parseFloat(input.value) || 0;
+            preview.innerText = (val / CONFIG.EXCHANGE_RATE).toFixed(5);
+        },
+
+        executeExchange: function() {
+            const input = document.getElementById('exchange-input');
+            if(!input) return;
+            const val = parseFloat(input.value);
+            if(!val || val <= 0 || val > this.data.coins) {
+                showToast('❌ Invalid amount', 'error');
+                return;
+            }
+            const scn = val / CONFIG.EXCHANGE_RATE;
+            this.data.coins -= val;
+            this.data.scn += scn;
+            this.syncPending = true;
+            input.value = '';
+            this.calcExchange();
+            this.updateUI();
+            showToast(`✅ Converted! +${scn.toFixed(4)} SCN`, 'success');
+        },
+
+        completeTask: function(id, reward) {
+            if(this.data.completedTasks.includes(id)) return;
+            setTimeout(() => {
+                this.addCoins(reward);
+                this.data.completedTasks.push(id);
+                this.syncPending = true;
+                this.updateUI();
+                this.renderTasks();
+                showToast(`✅ Task done! +${reward} coins`, 'success');
+            }, 1000);
+        },
+
+        watchAd: function() {
+            const btn = document.getElementById('btn-watch-ad');
+            if(!btn) return;
+            btn.innerText = 'Loading...';
+            btn.disabled = true;
+            setTimeout(() => {
+                this.addCoins(500);
+                this.syncPending = true;
+                this.updateUI();
+                showToast('✅ Ad watched! +500 Coins', 'success');
+                btn.innerText = 'Watch Again';
+                btn.disabled = false;
+            }, 3000);
+        },
+
+        updateUI: function() {
+            this.updateTexts();
+            this.updateEnergyBar();
+            this.updateVIPUI();
+        },
+
+        updateTexts: function() {
+            const c = Math.floor(this.data.coins);
+            const el = (id) => document.getElementById(id);
+            if(el('main-balance')) el('main-balance').innerText = c.toLocaleString();
+            if(el('header-coins')) el('header-coins').innerText = c.toLocaleString();
+            if(el('header-scn')) el('header-scn').innerText = this.data.scn.toFixed(4);
+            if(el('stat-taps')) el('stat-taps').innerText = this.data.totalTaps.toLocaleString();
+            if(el('stat-earned')) el('stat-earned').innerText = Math.floor(this.data.totalCoinsEarned).toLocaleString();
+        },
+
+        updateEnergyBar: function() {
+            const el = (id) => document.getElementById(id);
+            if(el('ui-energy')) el('ui-energy').innerText = Math.floor(this.data.energy);
+            if(el('energy-bar')) el('energy-bar').style.width = (this.data.energy / CONFIG.MAX_ENERGY * 100) + '%';
+        },
+
+        updateVIPUI: function() {
+            const lvl = this.data.vipLevel;
+            const el = (id) => document.getElementById(id);
+            if(el('ui-vip-level')) el('ui-vip-level').innerText = lvl;
+            if(el('header-vip')) el('header-vip').innerText = lvl;
+            if(el('profile-vip')) el('profile-vip').innerText = lvl;
+            
+            if(lvl >= 100) {
+                if(el('ui-vip-progress')) el('ui-vip-progress').innerText = 'MAX';
+                if(el('ui-vip-max')) el('ui-vip-max').innerText = 'MAX';
+                if(el('vip-bar-fill')) el('vip-bar-fill').style.width = '100%';
+                return;
+            }
+            
+            const cur = CONFIG.VIP_LEVELS.find(v => v.level === lvl);
+            const nxt = CONFIG.VIP_LEVELS.find(v => v.level === lvl + 1);
+            if(!cur || !nxt) return;
+            
+            const xp = this.data.totalCoinsEarned;
+            if(el('ui-vip-progress')) el('ui-vip-progress').innerText = Math.floor(xp).toLocaleString();
+            if(el('ui-vip-max')) el('ui-vip-max').innerText = nxt.xpReq.toLocaleString();
+            if(el('vip-bar-fill')) {
+                const pct = Math.min(100, Math.max(0, ((xp - cur.xpReq) / (nxt.xpReq - cur.xpReq)) * 100));
+                el('vip-bar-fill').style.width = pct + '%';
+            }
+        },
+
+        spawnText: function(txt, x, y) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = txt;
+            el.style.left = (x - 20 + Math.random() * 40 - 20) + 'px';
+            el.style.top = (y - 40) + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => { if(el.parentNode) el.remove(); }, 1000);
+        },
+
+        navigateTo: function(id) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('view-' + id);
+            if(target) target.classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const navItem = document.querySelector(`[data-target="${id}"]`);
+            if(navItem) navItem.classList.add('active');
+            
+            const main = document.getElementById('main-content');
+            if(main) main.scrollTop = 0;
+            
+            if(id === 'tasks') this.renderTasks();
+            if(id === 'leaderboard') this.loadLB();
+        },
+
+        hideLoader: function() {
+            const loader = document.getElementById('loader');
+            const app = document.getElementById('app');
+            if(loader) loader.style.display = 'none';
+            if(app) app.style.display = 'block';
+        },
+
+        renderTasks: function() {
+            const norm = [
+                {id:'t1',title:'Join Telegram Channel',reward:2000,icon:'fa-telegram',color:'#3b82f6'},
+                {id:'t2',title:'Follow Scartino on X',reward:2000,icon:'fa-twitter',color:'#fff'}
+            ];
+            const tasksList = document.getElementById('tasks-list');
+            if(tasksList) {
+                tasksList.innerHTML = norm.map(t => {
+                    const done = this.data.completedTasks.includes(t.id);
+                    return `<div class="glass-card p-3 flex justify-between items-center" style="opacity:${done?0.5:1}">
+                        <div class="flex items-center gap-3"><i class="fab ${t.icon} text-2xl" style="color:${t.color};"></i>
+                        <div><div class="font-bold text-sm font-cyber">${t.title}</div><div class="text-xs text-yellow-400">+${t.reward} Coins</div></div></div>
+                        <button class="px-4 py-1 rounded text-xs font-cyber" style="background:${done?'#4b5563':'white'};color:${done?'white':'black'};" ${done?'disabled':''} onclick="appState.completeTask('${t.id}',${t.reward})">${done?'Done':'Go'}</button>
+                    </div>`;
+                }).join('');
+            }
+            
+            const inv = [
+                {id:'inv1',title:'Invite 1 Friend',reward:5000},
+                {id:'inv3',title:'Invite 3 Friends',reward:15000},
+                {id:'inv5',title:'Invite 5 Friends',reward:30000}
+            ];
+            const invList = document.getElementById('invite-tasks-list');
+            if(invList) {
+                invList.innerHTML = inv.map(t => {
+                    const done = this.data.completedTasks.includes(t.id);
+                    return `<div class="bg-black/50 p-3 rounded flex justify-between items-center" style="opacity:${done?0.5:1}">
+                        <div><div class="font-bold text-sm font-cyber">${t.title}</div><div class="text-xs text-yellow-400">+${t.reward} Coins</div></div>
+                        <button class="px-3 py-1 rounded text-xs font-cyber" style="background:${done?'#4b5563':'#00f3ff'};color:${done?'white':'black'};" ${done?'disabled':''} onclick="appState.completeTask('${t.id}',${t.reward})">${done?'Done':'Check'}</button>
+                    </div>`;
+                }).join('');
+            }
+        },
+
+        loadLB: async function() {
+            const list = document.getElementById('leaderboard-list');
+            if(!list) return;
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                let users = [];
+                snap.forEach(d => users.push(d.data()));
+                users.sort((a,b) => (b.coins||0) - (a.coins||0));
+                users = users.slice(0, 50);
+                list.innerHTML = users.length > 0 ? users.map((u,i) => `
+                    <div class="flex justify-between items-center p-3 border-b border-white/10 last:border-0 font-cyber">
+                        <div class="flex items-center gap-3">
+                            <span style="color:#00f3ff;font-weight:bold;">${i+1}</span>
+                            <span class="text-sm font-bold">${u.name || 'Player'}</span>
+                        </div>
+                        <div class="text-yellow-400 text-sm">${Math.floor(u.coins||0)} <span class="text-[10px] text-gray-400">VIP${u.vipLevel||1}</span></div>
+                    </div>
+                `).join('') : '<div class="p-4 text-center text-gray-500">No data yet. Start tapping!</div>';
+            } catch(e) {
+                list.innerHTML = '<div class="p-4 text-center text-red-400">Failed to load leaderboard.</div>';
+            }
+        },
+
+        copyRef: function() {
+            const uid = this.user?.uid || 'guest';
+            navigator.clipboard.writeText(`https://t.me/scartino_bot?start=ref_${uid}`)
+                .then(() => showToast('✅ Invite link copied!', 'success'))
+                .catch(() => showToast('❌ Failed to copy', 'error'));
+        }
+    };
+
+    // Mines Game
+    window.minesGame = {
+        active: false, mult: 1, bet: 100, count: 3, locs: [], safe: 0,
+        showMenu() {
+            document.getElementById('arcade-menu').style.display = 'none';
+            document.getElementById('mines-game-container').style.display = 'block';
+            document.getElementById('mines-setup').style.display = 'block';
+            document.getElementById('mines-active').style.display = 'none';
+        },
+        start() {
+            const n = parseInt(document.getElementById('mines-count').value);
+            if(n<1||n>24) { showToast('Mines must be 1-24','error'); return; }
+            if(appState.data.coins < this.bet) { showToast('Not enough coins!','error'); return; }
+            
+            appState.data.coins -= this.bet;
+            appState.syncPending = true;
+            appState.updateUI();
+            
+            this.count = n;
+            this.active = true;
+            this.mult = 1;
+            this.safe = 0;
+            
+            document.getElementById('mines-setup').style.display = 'none';
+            document.getElementById('mines-active').style.display = 'block';
+            
+            const btn = document.getElementById('btn-cashout');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            this.updateUI();
+            
+            this.locs = [];
+            while(this.locs.length < this.count) {
+                let r = Math.floor(Math.random() * 25);
+                if(!this.locs.includes(r)) this.locs.push(r);
+            }
+            
+            const board = document.getElementById('mines-board');
+            board.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'mine-cell';
+                cell.onclick = () => this.click(cell, i);
+                board.appendChild(cell);
+            }
+        },
+        click(cell, idx) {
+            if(!this.active || cell.classList.contains('revealed-safe')) return;
+            if(this.locs.includes(idx)) {
+                cell.classList.add('revealed-mine');
+                cell.innerHTML = '<i class="fas fa-bomb"></i>';
+                this.end(false);
+            } else {
+                cell.classList.add('revealed-safe');
+                cell.innerHTML = '<i class="fas fa-gem"></i>';
+                this.safe++;
+                this.mult = parseFloat((1 + this.safe * (0.1 + this.count * 0.05)).toFixed(2));
+                this.updateUI();
+                const btn = document.getElementById('btn-cashout');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        },
+        cashout() {
+            if(!this.active) return;
+            const win = Math.floor(this.bet * this.mult);
+            appState.addCoins(win);
+            if(this.count > 3) {
+                const scnWin = 0.01 * this.mult;
+                appState.data.scn += scnWin;
+                showToast(`Cashed out! +${win} Coins & +${scnWin.toFixed(3)} SCN`, 'success');
+            } else {
+                showToast(`Cashed out! Won ${win} Coins`, 'success');
+            }
+            appState.syncPending = true;
+            appState.updateUI();
+            this.end(true);
+        },
+        end(won) {
+            this.active = false;
+            const cells = document.getElementById('mines-board').children;
+            this.locs.forEach(i => {
+                if(!cells[i].classList.contains('revealed-mine')) {
+                    cells[i].innerHTML = '<i class="fas fa-bomb" style="opacity:0.5;"></i>';
+                }
+            });
+            if(!won) showToast('💣 Boom! You hit a mine.', 'error');
+            const btn = document.getElementById('btn-cashout');
+            btn.innerText = 'Play Again (-100)';
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            btn.onclick = () => this.start();
+        },
+        updateUI() {
+            document.getElementById('mine-mult').innerText = this.mult.toFixed(2) + 'x';
+            document.getElementById('mine-profit').innerText = Math.floor(this.bet * this.mult);
+        },
+        close() {
+            if(this.active && this.safe > 0) this.cashout();
+            document.getElementById('mines-game-container').style.display = 'none';
+            document.getElementById('arcade-menu').style.display = 'grid';
+        }
+    };
+
+    // Memory Game
+    window.memoryGame = {
+        cards: [], flipped: [], matched: 0,
+        start() {
+            document.getElementById('arcade-menu').style.display = 'none';
+            document.getElementById('memory-game-container').style.display = 'block';
+            const board = document.getElementById('memory-board');
+            board.innerHTML = '';
+            this.matched = 0;
+            this.flipped = [];
+            const sym = ['💎','🚀','🤖','👾','⚡','🔥','🌟','🎯'];
+            this.cards = [...sym, ...sym].sort(() => Math.random() - 0.5);
+            this.cards.forEach((s, i) => {
+                let c = document.createElement('div');
+                c.className = 'bg-gray-800 h-16 rounded flex justify-center items-center text-3xl cursor-pointer border border-gray-700';
+                c.dataset.s = s;
+                c.onclick = () => this.flip(c);
+                c.innerHTML = '<span style="opacity:0;">' + s + '</span>';
+                board.appendChild(c);
+            });
+        },
+        flip(c) {
+            if(this.flipped.length >= 2 || this.flipped.includes(c) || c.classList.contains('matched')) return;
+            c.firstChild.style.opacity = '1';
+            c.style.background = '#00f3ff';
+            this.flipped.push(c);
+            if(this.flipped.length === 2) setTimeout(() => this.check(), 600);
+        },
+        check() {
+            const [c1, c2] = this.flipped;
+            if(c1.dataset.s === c2.dataset.s) {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                c1.style.background = '#22c55e';
+                c2.style.background = '#22c55e';
+                this.matched++;
+                if(this.matched === 8) {
+                    showToast('You won! +500 Coins', 'success');
+                    appState.addCoins(500);
+                    appState.syncPending = true;
+                    appState.updateUI();
+                    setTimeout(() => this.close(), 1000);
+                }
+            } else {
+                c1.firstChild.style.opacity = '0';
+                c2.firstChild.style.opacity = '0';
+                c1.style.background = '#1f2937';
+                c2.style.background = '#1f2937';
+            }
+            this.flipped = [];
+        },
+        close() {
+            document.getElementById('memory-game-container').style.display = 'none';
+            document.getElementById('arcade-menu').style.display = 'grid';
+        }
+    };
+
+    // ==================== INITIALIZE ====================
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🚀 Scartino Initializing...');
+        appState.init();
+        
+        // Tap handler
+        const tapArea = document.getElementById('tap-area');
+        if(tapArea) {
+            const handler = (e) => {
+                e.preventDefault();
+                appState.handleTap(e);
+            };
+            tapArea.addEventListener('touchstart', handler, {passive: false});
+            tapArea.addEventListener('mousedown', (e) => {
+                if(!('ontouchstart' in window)) handler(e);
+            });
+        }
+        
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const target = this.getAttribute('data-target');
+                if(target) appState.navigateTo(target);
+            });
+        });
+        
+        console.log('✅ Scartino Ready!');
+        console.log('🛡️ Admin Panel: Click shield button → admin.html');
+    });
+</script>
+
+</body>
+</html>
