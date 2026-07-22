@@ -21,24 +21,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, increment, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDiLjeXT4qgZLw7VM9BfOK-S7p6So_RFxY",
-            authDomain: "scartino07.firebaseapp.com",
-            projectId: "scartino07",
-            storageBucket: "scartino07.firebasestorage.app",
-            messagingSenderId: "855519714718",
-            appId: "1:855519714718:web:dd6fbab4c5f4d8241aca8f",
-            measurementId: "G-BYYSXTTQN9"
-        };
-        const appIdString = 'scartino-prod-v6';
-        const app = initializeApp(firebaseConfig);
-        window.firebaseApp = { auth: getAuth(app), db: getFirestore(app), appId: appIdString };
-    </script>
+    <!-- 🔥 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -178,6 +164,14 @@
             transition: all 0.3s; opacity: 0.5;
         }
         .admin-btn:hover { opacity: 1; border-color: #00f3ff; }
+        
+        /* 🔥 Offline Banner */
+        #offline-banner {
+            position: fixed; top: 64px; left: 0; right: 0; z-index: 200;
+            background: #ef4444; color: white; text-align: center;
+            padding: 8px; font-family: 'Orbitron', sans-serif; font-size: 12px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -186,7 +180,12 @@
 <div id="loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0f;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;">
     <h1 style="font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:bold;background:linear-gradient(135deg,#00f3ff,#bc13fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;">SCARTINO</h1>
     <i class="fas fa-circle-notch fa-spin text-4xl" style="color:#00f3ff;"></i>
-    <p class="mt-4 text-sm text-gray-400" style="font-family:'Orbitron',sans-serif;">Loading game...</p>
+    <p class="mt-4 text-sm text-gray-400" style="font-family:'Orbitron',sans-serif;">Connecting...</p>
+</div>
+
+<!-- Offline Banner -->
+<div id="offline-banner">
+    <i class="fas fa-wifi"></i> No Internet Connection - Data will sync when online
 </div>
 
 <!-- Toast Container -->
@@ -349,47 +348,93 @@
         <div class="nav-item" data-target="leaderboard"><i class="fas fa-trophy"></i><span>Top</span></div>
     </nav>
     
-    <!-- 🔥 Admin Shield Button - Redirects to Admin Panel -->
-    <button class="admin-btn" onclick="goToAdminPanel()" title="Admin Panel">
+    <!-- Admin Button -->
+    <button class="admin-btn" onclick="goToAdminPanel()" title="Admin">
         <i class="fas fa-shield-alt"></i>
     </button>
 </div>
 
-<script type="module">
-    import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    import { doc, setDoc, getDoc, collection, getDocs, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-    const { auth, db, appId } = window.firebaseApp;
-
-    // ⚙️ CONFIG (No passwords here - all in Firebase)
+<script>
+    // ==================== FIREBASE INIT (Compat Mode) ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDiLjeXT4qgZLw7VM9BfOK-S7p6So_RFxY",
+        authDomain: "scartino07.firebaseapp.com",
+        projectId: "scartino07",
+        storageBucket: "scartino07.firebasestorage.app",
+        messagingSenderId: "855519714718",
+        appId: "1:855519714718:web:dd6fbab4c5f4d8241aca8f",
+        measurementId: "G-BYYSXTTQN9"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const appId = 'scartino-prod-v7';
+    
+    // 🔥 Enable offline persistence
+    db.enablePersistence()
+        .then(() => console.log('✅ Offline persistence enabled'))
+        .catch((err) => console.log('Persistence error:', err));
+    
+    // ==================== ONLINE/OFFLINE DETECTION ====================
+    let isOnline = navigator.onLine;
+    
+    window.addEventListener('online', () => {
+        isOnline = true;
+        document.getElementById('offline-banner').style.display = 'none';
+        showToast('✅ Back online! Syncing data...', 'success');
+        appState.syncPending = true;
+        appState.saveData();
+    });
+    
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        document.getElementById('offline-banner').style.display = 'block';
+        showToast('⚠️ Offline mode - Data saved locally', 'error');
+    });
+    
+    // ==================== CONFIG ====================
     const CONFIG = {
         EXCHANGE_RATE: 7777,
         MAX_ENERGY: 1000,
-        AUTO_MINE_MS: 2500,   // 2.5 seconds auto mine
-        ENERGY_REGEN_MS: 1000, // 1 second energy refill
+        AUTO_MINE_MS: 2500,
+        ENERGY_REGEN_MS: 1000,
         VIP_LEVELS: Array.from({length: 100}, (_, i) => ({ level: i+1, xpReq: i * 2000 }))
     };
-
-    // 🔥 Admin Panel Redirect Function
+    
+    // ==================== LOCAL STORAGE BACKUP ====================
+    function saveLocalData(data) {
+        try {
+            localStorage.setItem('scartino_data', JSON.stringify(data));
+        } catch(e) {}
+    }
+    
+    function loadLocalData() {
+        try {
+            const saved = localStorage.getItem('scartino_data');
+            return saved ? JSON.parse(saved) : null;
+        } catch(e) {
+            return null;
+        }
+    }
+    
     window.goToAdminPanel = function() {
-        // Admin panel page path (same folder)
         window.location.href = 'admin.html';
     };
-
-    // Toast function
+    
     window.showToast = function(msg, type = 'info') {
         const container = document.getElementById('toast-container');
         if(!container) return;
         const toast = document.createElement('div');
         toast.className = 'toast-item p-3 rounded border font-cyber text-sm text-white shadow-lg';
-        toast.style.background = type === 'error' ? 'rgba(185,28,28,0.9)' : 'rgba(31,41,55,0.9)';
+        toast.style.background = type === 'error' ? 'rgba(185,28,28,0.9)' : type === 'success' ? 'rgba(34,197,94,0.9)' : 'rgba(31,41,55,0.9)';
         toast.style.borderColor = type === 'error' ? '#ef4444' : '#00f3ff';
         toast.style.pointerEvents = 'auto';
         toast.innerHTML = msg;
         container.appendChild(toast);
-        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 2500);
+        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 3000);
     };
-
+    
     // ==================== APP STATE ====================
     window.appState = {
         user: null, tgUser: null,
@@ -397,34 +442,46 @@
         syncPending: false,
         intervals: { autoMine: null, energyRegen: null, save: null },
         initialized: false,
-
+    
         init: async function() {
             if(this.initialized) return;
             this.initialized = true;
             
             this.initTelegram();
             
-            try {
-                await signInAnonymously(auth);
-                onAuthStateChanged(auth, async (user) => {
-                    if (user && !this.user) {
-                        this.user = user;
-                        console.log('✅ User authenticated:', user.uid);
-                        await this.loadData();
-                        this.listenGlobal();
+            // 🔥 First try local data for instant load
+            const localData = loadLocalData();
+            if (localData) {
+                this.data = { ...this.data, ...localData };
+                this.updateUI();
+                this.renderTasks();
+                console.log('📦 Loaded from local storage');
+            }
+            
+            // 🔥 Firebase Auth with persistence
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => {
+                    console.log('✅ Auth persistence set to LOCAL');
+                })
+                .catch(err => console.log('Auth persistence error:', err));
+            
+            auth.signInAnonymously()
+                .then((result) => {
+                    this.user = result.user;
+                    console.log('✅ Anonymous auth:', this.user.uid);
+                    this.loadFromFirebase();
+                })
+                .catch((error) => {
+                    console.log('Auth error:', error);
+                    this.hideLoader();
+                    // Use local data if auth fails
+                    if (localData) {
                         this.startLoops();
-                        this.hideLoader();
                         this.updateUI();
-                        this.renderTasks();
                     }
                 });
-            } catch(e) {
-                console.error('Auth error:', e);
-                this.hideLoader();
-                showToast('Connection error. Please reload.', 'error');
-            }
         },
-
+    
         initTelegram: function() {
             const tg = window.Telegram?.WebApp;
             if (tg) { 
@@ -436,12 +493,13 @@
                 this.tgUser = { id: 'guest_' + Date.now(), first_name: 'Player' };
             }
         },
-
-        loadData: async function() {
+    
+        loadFromFirebase: async function() {
             try {
-                const ref = doc(db, 'artifacts', appId, 'users', this.user.uid, 'gamedata', 'main');
-                const snap = await getDoc(ref);
-                if (snap.exists()) {
+                const ref = db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('main');
+                const snap = await ref.get();
+                
+                if (snap.exists) {
                     const d = snap.data();
                     this.data.coins = d.coins || 0;
                     this.data.scn = d.scn || 0;
@@ -450,13 +508,21 @@
                     this.data.vipLevel = d.vipLevel || 1;
                     this.data.totalTaps = d.totalTaps || 0;
                     this.data.completedTasks = d.completedTasks || [];
+                    console.log('✅ Loaded from Firebase');
                 } else {
-                    await setDoc(ref, this.data);
+                    // New user - save initial data
+                    await ref.set(this.data);
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats'), 
-                            { totalUsers: increment(1) }, { merge: true });
+                        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('stats').doc('globalStats').set({
+                            totalUsers: firebase.firestore.FieldValue.increment(1)
+                        }, { merge: true });
                     } catch(e) {}
+                    console.log('✅ New user created');
                 }
+                
+                // Save to local storage as backup
+                saveLocalData(this.data);
+                
                 document.getElementById('profile-name').innerText = this.tgUser.first_name || 'Player';
                 document.getElementById('user-name').innerText = this.tgUser.first_name || 'Player';
                 if(this.tgUser.photo_url) {
@@ -464,30 +530,46 @@
                     document.getElementById('profile-avatar').src = this.tgUser.photo_url;
                 }
                 this.checkVIP();
-                console.log('✅ Data loaded - Coins:', this.data.coins, 'Energy:', this.data.energy);
+                this.listenGlobal();
+                this.startLoops();
+                this.hideLoader();
+                this.updateUI();
+                this.renderTasks();
+                
             } catch(e) {
-                console.error('Load error:', e);
+                console.log('Firebase load error:', e);
+                // Use local data
+                this.listenGlobal();
+                this.startLoops();
+                this.hideLoader();
+                this.updateUI();
+                this.renderTasks();
             }
         },
-
+    
         listenGlobal: function() {
             try {
-                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'globalStats');
-                onSnapshot(globalRef, (snap) => {
-                    const total = snap.exists() ? (snap.data().totalUsers || 0) : 0;
-                    const el1 = document.getElementById('global-count-modal');
-                    const el2 = document.getElementById('global-count-wallet');
-                    if(el1) el1.innerText = total.toLocaleString();
-                    if(el2) el2.innerText = total.toLocaleString();
-                }, (err) => console.log('Global listener error:', err));
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('stats').doc('globalStats')
+                    .onSnapshot((snap) => {
+                        if (snap.exists) {
+                            const total = snap.data().totalUsers || 0;
+                            const el1 = document.getElementById('global-count-modal');
+                            const el2 = document.getElementById('global-count-wallet');
+                            if(el1) el1.innerText = total.toLocaleString();
+                            if(el2) el2.innerText = total.toLocaleString();
+                        }
+                    }, (err) => console.log('Listener error:', err));
             } catch(e) {}
         },
-
+    
         saveData: async function() {
-            if (!this.user || !this.syncPending) return;
+            // Always save locally
+            saveLocalData(this.data);
+            
+            if (!this.user || !this.syncPending || !isOnline) return;
             try {
-                const ref = doc(db, 'artifacts', appId, 'users', this.user.uid, 'gamedata', 'main');
-                await setDoc(ref, {
+                const ref = db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('main');
+                await ref.set({
                     coins: this.data.coins,
                     scn: this.data.scn,
                     energy: this.data.energy,
@@ -501,7 +583,7 @@
                 console.log('Save error:', e);
             }
         },
-
+    
         handleTap: function(e) {
             if (this.data.energy < 1) {
                 showToast('⚡ No energy! Wait for refill.', 'error');
@@ -529,93 +611,77 @@
             else if (e?.clientX) { x = e.clientX; y = e.clientY; }
             this.spawnText('+1', x, y);
         },
-
+    
         addCoins: function(amount) {
             this.data.coins += amount;
             this.data.totalCoinsEarned += amount;
             this.checkVIP();
         },
-
+    
         startLoops: function() {
-            // Clear existing intervals
             if (this.intervals.autoMine) clearInterval(this.intervals.autoMine);
             if (this.intervals.energyRegen) clearInterval(this.intervals.energyRegen);
             if (this.intervals.save) clearInterval(this.intervals.save);
             
-            // 🔥 AUTO MINE: +1 coin every 2.5 seconds
             this.intervals.autoMine = setInterval(() => {
-                if (this.user) {
+                if (this.user || true) {
                     this.addCoins(1);
                     this.syncPending = true;
                     this.updateUI();
                 }
             }, CONFIG.AUTO_MINE_MS);
             
-            // 🔥 ENERGY REGEN: +1 energy every 1 second
             this.intervals.energyRegen = setInterval(() => {
-                if (this.user && this.data.energy < CONFIG.MAX_ENERGY) {
+                if (this.data.energy < CONFIG.MAX_ENERGY) {
                     this.data.energy++;
                     this.syncPending = true;
                     this.updateEnergyBar();
                 }
             }, CONFIG.ENERGY_REGEN_MS);
             
-            // Auto save every 5 seconds
             this.intervals.save = setInterval(() => {
-                if (this.syncPending && this.user) {
-                    this.saveData();
-                }
+                if (this.syncPending) this.saveData();
             }, 5000);
             
             console.log('✅ Loops started');
-            console.log('  - Auto Mine: every', CONFIG.AUTO_MINE_MS/1000, 'seconds');
-            console.log('  - Energy Regen: every', CONFIG.ENERGY_REGEN_MS/1000, 'second');
         },
-
+    
         checkVIP: function() {
             let newLevel = 1;
             for(let i = CONFIG.VIP_LEVELS.length - 1; i >= 0; i--) {
                 if(this.data.totalCoinsEarned >= CONFIG.VIP_LEVELS[i].xpReq) {
-                    newLevel = CONFIG.VIP_LEVELS[i].level;
-                    break;
+                    newLevel = CONFIG.VIP_LEVELS[i].level; break;
                 }
             }
             if(newLevel > this.data.vipLevel) {
-                const levelsGained = newLevel - this.data.vipLevel;
-                this.data.scn += levelsGained * 0.1;
+                this.data.scn += (newLevel - this.data.vipLevel) * 0.1;
                 this.data.vipLevel = newLevel;
                 this.syncPending = true;
-                showToast(`🎉 VIP ${newLevel}! +${(levelsGained * 0.1).toFixed(1)} SCN`, 'success');
+                showToast(`🎉 VIP ${newLevel}!`, 'success');
             }
             this.updateVIPUI();
         },
-
+    
         calcExchange: function() {
-            const input = document.getElementById('exchange-input');
-            const preview = document.getElementById('exchange-preview');
-            if(!input || !preview) return;
-            const val = parseFloat(input.value) || 0;
-            preview.innerText = (val / CONFIG.EXCHANGE_RATE).toFixed(5);
+            const val = parseFloat(document.getElementById('exchange-input').value) || 0;
+            document.getElementById('exchange-preview').innerText = (val / CONFIG.EXCHANGE_RATE).toFixed(5);
         },
-
+    
         executeExchange: function() {
-            const input = document.getElementById('exchange-input');
-            if(!input) return;
-            const val = parseFloat(input.value);
+            const val = parseFloat(document.getElementById('exchange-input').value);
             if(!val || val <= 0 || val > this.data.coins) {
-                showToast('❌ Invalid amount', 'error');
-                return;
+                showToast('❌ Invalid amount', 'error'); return;
             }
             const scn = val / CONFIG.EXCHANGE_RATE;
             this.data.coins -= val;
             this.data.scn += scn;
             this.syncPending = true;
-            input.value = '';
+            document.getElementById('exchange-input').value = '';
             this.calcExchange();
             this.updateUI();
-            showToast(`✅ Converted! +${scn.toFixed(4)} SCN`, 'success');
+            showToast(`✅ +${scn.toFixed(4)} SCN`, 'success');
         },
-
+    
         completeTask: function(id, reward) {
             if(this.data.completedTasks.includes(id)) return;
             setTimeout(() => {
@@ -624,31 +690,28 @@
                 this.syncPending = true;
                 this.updateUI();
                 this.renderTasks();
-                showToast(`✅ Task done! +${reward} coins`, 'success');
+                showToast(`✅ +${reward} coins`, 'success');
             }, 1000);
         },
-
+    
         watchAd: function() {
             const btn = document.getElementById('btn-watch-ad');
-            if(!btn) return;
-            btn.innerText = 'Loading...';
-            btn.disabled = true;
+            btn.innerText = 'Loading...'; btn.disabled = true;
             setTimeout(() => {
                 this.addCoins(500);
                 this.syncPending = true;
                 this.updateUI();
-                showToast('✅ Ad watched! +500 Coins', 'success');
-                btn.innerText = 'Watch Again';
-                btn.disabled = false;
+                showToast('✅ +500 Coins', 'success');
+                btn.innerText = 'Watch Again'; btn.disabled = false;
             }, 3000);
         },
-
+    
         updateUI: function() {
             this.updateTexts();
             this.updateEnergyBar();
             this.updateVIPUI();
         },
-
+    
         updateTexts: function() {
             const c = Math.floor(this.data.coins);
             const el = (id) => document.getElementById(id);
@@ -658,13 +721,13 @@
             if(el('stat-taps')) el('stat-taps').innerText = this.data.totalTaps.toLocaleString();
             if(el('stat-earned')) el('stat-earned').innerText = Math.floor(this.data.totalCoinsEarned).toLocaleString();
         },
-
+    
         updateEnergyBar: function() {
             const el = (id) => document.getElementById(id);
             if(el('ui-energy')) el('ui-energy').innerText = Math.floor(this.data.energy);
             if(el('energy-bar')) el('energy-bar').style.width = (this.data.energy / CONFIG.MAX_ENERGY * 100) + '%';
         },
-
+    
         updateVIPUI: function() {
             const lvl = this.data.vipLevel;
             const el = (id) => document.getElementById(id);
@@ -687,11 +750,10 @@
             if(el('ui-vip-progress')) el('ui-vip-progress').innerText = Math.floor(xp).toLocaleString();
             if(el('ui-vip-max')) el('ui-vip-max').innerText = nxt.xpReq.toLocaleString();
             if(el('vip-bar-fill')) {
-                const pct = Math.min(100, Math.max(0, ((xp - cur.xpReq) / (nxt.xpReq - cur.xpReq)) * 100));
-                el('vip-bar-fill').style.width = pct + '%';
+                el('vip-bar-fill').style.width = Math.min(100, ((xp - cur.xpReq) / (nxt.xpReq - cur.xpReq)) * 100) + '%';
             }
         },
-
+    
         spawnText: function(txt, x, y) {
             const el = document.createElement('div');
             el.className = 'floating-text';
@@ -701,7 +763,7 @@
             document.body.appendChild(el);
             setTimeout(() => { if(el.parentNode) el.remove(); }, 1000);
         },
-
+    
         navigateTo: function(id) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             const target = document.getElementById('view-' + id);
@@ -711,24 +773,21 @@
             const navItem = document.querySelector(`[data-target="${id}"]`);
             if(navItem) navItem.classList.add('active');
             
-            const main = document.getElementById('main-content');
-            if(main) main.scrollTop = 0;
+            document.getElementById('main-content').scrollTop = 0;
             
             if(id === 'tasks') this.renderTasks();
             if(id === 'leaderboard') this.loadLB();
         },
-
+    
         hideLoader: function() {
-            const loader = document.getElementById('loader');
-            const app = document.getElementById('app');
-            if(loader) loader.style.display = 'none';
-            if(app) app.style.display = 'block';
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
         },
-
+    
         renderTasks: function() {
             const norm = [
                 {id:'t1',title:'Join Telegram Channel',reward:2000,icon:'fa-telegram',color:'#3b82f6'},
-                {id:'t2',title:'Follow Scartino on X',reward:2000,icon:'fa-twitter',color:'#fff'}
+                {id:'t2',title:'Follow on X',reward:2000,icon:'fa-twitter',color:'#fff'}
             ];
             const tasksList = document.getElementById('tasks-list');
             if(tasksList) {
@@ -742,54 +801,44 @@
                 }).join('');
             }
             
-            const inv = [
-                {id:'inv1',title:'Invite 1 Friend',reward:5000},
-                {id:'inv3',title:'Invite 3 Friends',reward:15000},
-                {id:'inv5',title:'Invite 5 Friends',reward:30000}
-            ];
+            const inv = [{id:'inv1',title:'Invite 1 Friend',reward:5000},{id:'inv3',title:'Invite 3 Friends',reward:15000},{id:'inv5',title:'Invite 5 Friends',reward:30000}];
             const invList = document.getElementById('invite-tasks-list');
             if(invList) {
                 invList.innerHTML = inv.map(t => {
                     const done = this.data.completedTasks.includes(t.id);
-                    return `<div class="bg-black/50 p-3 rounded flex justify-between items-center" style="opacity:${done?0.5:1}">
+                    return `<div class="bg-black/50 p-3 rounded flex justify-between" style="opacity:${done?0.5:1}">
                         <div><div class="font-bold text-sm font-cyber">${t.title}</div><div class="text-xs text-yellow-400">+${t.reward} Coins</div></div>
                         <button class="px-3 py-1 rounded text-xs font-cyber" style="background:${done?'#4b5563':'#00f3ff'};color:${done?'white':'black'};" ${done?'disabled':''} onclick="appState.completeTask('${t.id}',${t.reward})">${done?'Done':'Check'}</button>
                     </div>`;
                 }).join('');
             }
         },
-
+    
         loadLB: async function() {
             const list = document.getElementById('leaderboard-list');
             if(!list) return;
             try {
-                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                const snap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('leaderboard').get();
                 let users = [];
                 snap.forEach(d => users.push(d.data()));
                 users.sort((a,b) => (b.coins||0) - (a.coins||0));
                 users = users.slice(0, 50);
                 list.innerHTML = users.length > 0 ? users.map((u,i) => `
-                    <div class="flex justify-between items-center p-3 border-b border-white/10 last:border-0 font-cyber">
-                        <div class="flex items-center gap-3">
-                            <span style="color:#00f3ff;font-weight:bold;">${i+1}</span>
-                            <span class="text-sm font-bold">${u.name || 'Player'}</span>
-                        </div>
-                        <div class="text-yellow-400 text-sm">${Math.floor(u.coins||0)} <span class="text-[10px] text-gray-400">VIP${u.vipLevel||1}</span></div>
-                    </div>
-                `).join('') : '<div class="p-4 text-center text-gray-500">No data yet. Start tapping!</div>';
+                    <div class="flex justify-between p-3 border-b border-white/10 font-cyber">
+                        <div class="flex items-center gap-3"><span style="color:#00f3ff;">${i+1}</span><span>${u.name||'Player'}</span></div>
+                        <div class="text-yellow-400">${Math.floor(u.coins||0)} <span class="text-[10px] text-gray-400">VIP${u.vipLevel||1}</span></div>
+                    </div>`).join('') : '<div class="p-4 text-center text-gray-500">No data yet.</div>';
             } catch(e) {
-                list.innerHTML = '<div class="p-4 text-center text-red-400">Failed to load leaderboard.</div>';
+                list.innerHTML = '<div class="p-4 text-center text-gray-500">Offline - cannot load leaderboard</div>';
             }
         },
-
+    
         copyRef: function() {
-            const uid = this.user?.uid || 'guest';
-            navigator.clipboard.writeText(`https://t.me/scartino_bot?start=ref_${uid}`)
-                .then(() => showToast('✅ Invite link copied!', 'success'))
-                .catch(() => showToast('❌ Failed to copy', 'error'));
+            navigator.clipboard.writeText(`https://t.me/scartino_bot?start=ref_${this.user?.uid||'guest'}`)
+                .then(() => showToast('✅ Link copied!', 'success'));
         }
     };
-
+    
     // Mines Game
     window.minesGame = {
         active: false, mult: 1, bet: 100, count: 3, locs: [], safe: 0,
@@ -801,186 +850,102 @@
         },
         start() {
             const n = parseInt(document.getElementById('mines-count').value);
-            if(n<1||n>24) { showToast('Mines must be 1-24','error'); return; }
+            if(n<1||n>24) { showToast('Mines 1-24','error'); return; }
             if(appState.data.coins < this.bet) { showToast('Not enough coins!','error'); return; }
-            
-            appState.data.coins -= this.bet;
-            appState.syncPending = true;
-            appState.updateUI();
-            
-            this.count = n;
-            this.active = true;
-            this.mult = 1;
-            this.safe = 0;
-            
-            document.getElementById('mines-setup').style.display = 'none';
-            document.getElementById('mines-active').style.display = 'block';
-            
-            const btn = document.getElementById('btn-cashout');
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
+            appState.data.coins -= this.bet; appState.syncPending=true; appState.updateUI();
+            this.count=n; this.active=true; this.mult=1; this.safe=0;
+            document.getElementById('mines-setup').style.display='none';
+            document.getElementById('mines-active').style.display='block';
+            document.getElementById('btn-cashout').disabled=true;
+            document.getElementById('btn-cashout').classList.add('opacity-50');
             this.updateUI();
-            
-            this.locs = [];
-            while(this.locs.length < this.count) {
-                let r = Math.floor(Math.random() * 25);
-                if(!this.locs.includes(r)) this.locs.push(r);
-            }
-            
-            const board = document.getElementById('mines-board');
-            board.innerHTML = '';
-            for(let i=0; i<25; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'mine-cell';
-                cell.onclick = () => this.click(cell, i);
-                board.appendChild(cell);
-            }
+            this.locs=[]; while(this.locs.length<this.count){let r=Math.floor(Math.random()*25);if(!this.locs.includes(r))this.locs.push(r);}
+            document.getElementById('mines-board').innerHTML='';
+            for(let i=0;i<25;i++){let c=document.createElement('div');c.className='mine-cell';c.onclick=()=>this.click(c,i);document.getElementById('mines-board').appendChild(c);}
         },
-        click(cell, idx) {
-            if(!this.active || cell.classList.contains('revealed-safe')) return;
-            if(this.locs.includes(idx)) {
-                cell.classList.add('revealed-mine');
-                cell.innerHTML = '<i class="fas fa-bomb"></i>';
-                this.end(false);
-            } else {
-                cell.classList.add('revealed-safe');
-                cell.innerHTML = '<i class="fas fa-gem"></i>';
-                this.safe++;
-                this.mult = parseFloat((1 + this.safe * (0.1 + this.count * 0.05)).toFixed(2));
-                this.updateUI();
-                const btn = document.getElementById('btn-cashout');
-                btn.disabled = false;
-                btn.classList.remove('opacity-50');
-            }
+        click(cell,idx) {
+            if(!this.active||cell.classList.contains('revealed-safe'))return;
+            if(this.locs.includes(idx)){cell.classList.add('revealed-mine');cell.innerHTML='💣';this.end(false);}
+            else{cell.classList.add('revealed-safe');cell.innerHTML='💎';this.safe++;this.mult=+(1+this.safe*(0.1+this.count*0.05)).toFixed(2);this.updateUI();document.getElementById('btn-cashout').disabled=false;document.getElementById('btn-cashout').classList.remove('opacity-50');}
         },
         cashout() {
-            if(!this.active) return;
-            const win = Math.floor(this.bet * this.mult);
-            appState.addCoins(win);
-            if(this.count > 3) {
-                const scnWin = 0.01 * this.mult;
-                appState.data.scn += scnWin;
-                showToast(`Cashed out! +${win} Coins & +${scnWin.toFixed(3)} SCN`, 'success');
-            } else {
-                showToast(`Cashed out! Won ${win} Coins`, 'success');
-            }
-            appState.syncPending = true;
-            appState.updateUI();
-            this.end(true);
+            if(!this.active)return;
+            const w=Math.floor(this.bet*this.mult);appState.addCoins(w);
+            if(this.count>3){const s=0.01*this.mult;appState.data.scn+=s;showToast(`+${w} Coins & +${s.toFixed(3)} SCN`,'success');}
+            else showToast(`Won ${w} Coins`,'success');
+            appState.syncPending=true;appState.updateUI();this.end(true);
         },
         end(won) {
-            this.active = false;
-            const cells = document.getElementById('mines-board').children;
-            this.locs.forEach(i => {
-                if(!cells[i].classList.contains('revealed-mine')) {
-                    cells[i].innerHTML = '<i class="fas fa-bomb" style="opacity:0.5;"></i>';
-                }
-            });
-            if(!won) showToast('💣 Boom! You hit a mine.', 'error');
-            const btn = document.getElementById('btn-cashout');
-            btn.innerText = 'Play Again (-100)';
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-            btn.onclick = () => this.start();
+            this.active=false;
+            const cells=document.getElementById('mines-board').children;
+            this.locs.forEach(i=>{if(!cells[i].classList.contains('revealed-mine'))cells[i].innerHTML='💣';});
+            if(!won)showToast('Boom!','error');
+            const b=document.getElementById('btn-cashout');b.innerText='Play Again (-100)';b.disabled=false;b.classList.remove('opacity-50');b.onclick=()=>this.start();
         },
-        updateUI() {
-            document.getElementById('mine-mult').innerText = this.mult.toFixed(2) + 'x';
-            document.getElementById('mine-profit').innerText = Math.floor(this.bet * this.mult);
-        },
-        close() {
-            if(this.active && this.safe > 0) this.cashout();
-            document.getElementById('mines-game-container').style.display = 'none';
-            document.getElementById('arcade-menu').style.display = 'grid';
-        }
+        updateUI(){document.getElementById('mine-mult').innerText=this.mult.toFixed(2)+'x';document.getElementById('mine-profit').innerText=Math.floor(this.bet*this.mult);},
+        close(){if(this.active&&this.safe>0)this.cashout();document.getElementById('mines-game-container').style.display='none';document.getElementById('arcade-menu').style.display='grid';}
     };
-
+    
     // Memory Game
     window.memoryGame = {
-        cards: [], flipped: [], matched: 0,
+        cards:[],flipped:[],matched:0,
         start() {
-            document.getElementById('arcade-menu').style.display = 'none';
-            document.getElementById('memory-game-container').style.display = 'block';
-            const board = document.getElementById('memory-board');
-            board.innerHTML = '';
-            this.matched = 0;
-            this.flipped = [];
-            const sym = ['💎','🚀','🤖','👾','⚡','🔥','🌟','🎯'];
-            this.cards = [...sym, ...sym].sort(() => Math.random() - 0.5);
-            this.cards.forEach((s, i) => {
-                let c = document.createElement('div');
-                c.className = 'bg-gray-800 h-16 rounded flex justify-center items-center text-3xl cursor-pointer border border-gray-700';
-                c.dataset.s = s;
-                c.onclick = () => this.flip(c);
-                c.innerHTML = '<span style="opacity:0;">' + s + '</span>';
-                board.appendChild(c);
+            document.getElementById('arcade-menu').style.display='none';
+            document.getElementById('memory-game-container').style.display='block';
+            document.getElementById('memory-board').innerHTML='';this.matched=0;this.flipped=[];
+            const s=['💎','🚀','🤖','👾','⚡','🔥','🌟','🎯'];
+            this.cards=[...s,...s].sort(()=>Math.random()-0.5);
+            this.cards.forEach((sym,i)=>{
+                let c=document.createElement('div');c.className='bg-gray-800 h-16 rounded flex justify-center items-center text-3xl cursor-pointer border border-gray-700';
+                c.dataset.s=sym;c.onclick=()=>this.flip(c);c.innerHTML='<span style="opacity:0">'+sym+'</span>';document.getElementById('memory-board').appendChild(c);
             });
         },
         flip(c) {
-            if(this.flipped.length >= 2 || this.flipped.includes(c) || c.classList.contains('matched')) return;
-            c.firstChild.style.opacity = '1';
-            c.style.background = '#00f3ff';
-            this.flipped.push(c);
-            if(this.flipped.length === 2) setTimeout(() => this.check(), 600);
+            if(this.flipped.length>=2||this.flipped.includes(c)||c.classList.contains('matched'))return;
+            c.firstChild.style.opacity='1';c.style.background='#00f3ff';this.flipped.push(c);
+            if(this.flipped.length===2)setTimeout(()=>this.check(),600);
         },
         check() {
-            const [c1, c2] = this.flipped;
-            if(c1.dataset.s === c2.dataset.s) {
-                c1.classList.add('matched');
-                c2.classList.add('matched');
-                c1.style.background = '#22c55e';
-                c2.style.background = '#22c55e';
-                this.matched++;
-                if(this.matched === 8) {
-                    showToast('You won! +500 Coins', 'success');
-                    appState.addCoins(500);
-                    appState.syncPending = true;
-                    appState.updateUI();
-                    setTimeout(() => this.close(), 1000);
-                }
-            } else {
-                c1.firstChild.style.opacity = '0';
-                c2.firstChild.style.opacity = '0';
-                c1.style.background = '#1f2937';
-                c2.style.background = '#1f2937';
-            }
-            this.flipped = [];
+            const [c1,c2]=this.flipped;
+            if(c1.dataset.s===c2.dataset.s){c1.classList.add('matched');c2.classList.add('matched');c1.style.background='#22c55e';c2.style.background='#22c55e';this.matched++;
+                if(this.matched===8){showToast('+500 Coins!','success');appState.addCoins(500);appState.syncPending=true;appState.updateUI();setTimeout(()=>this.close(),1000);}}
+            else{c1.firstChild.style.opacity='0';c2.firstChild.style.opacity='0';c1.style.background='#1f2937';c2.style.background='#1f2937';}
+            this.flipped=[];
         },
-        close() {
-            document.getElementById('memory-game-container').style.display = 'none';
-            document.getElementById('arcade-menu').style.display = 'grid';
-        }
+        close(){document.getElementById('memory-game-container').style.display='none';document.getElementById('arcade-menu').style.display='grid';}
     };
-
-    // ==================== INITIALIZE ====================
+    
+    // Init
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('🚀 Scartino Initializing...');
+        console.log('🚀 Scartino Starting...');
         appState.init();
         
-        // Tap handler
         const tapArea = document.getElementById('tap-area');
-        if(tapArea) {
-            const handler = (e) => {
-                e.preventDefault();
-                appState.handleTap(e);
-            };
-            tapArea.addEventListener('touchstart', handler, {passive: false});
-            tapArea.addEventListener('mousedown', (e) => {
-                if(!('ontouchstart' in window)) handler(e);
-            });
-        }
+        const handler = (e) => { e.preventDefault(); appState.handleTap(e); };
+        tapArea.addEventListener('touchstart', handler, {passive: false});
+        tapArea.addEventListener('mousedown', (e) => { if(!('ontouchstart' in window)) handler(e); });
         
-        // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
-                const target = this.getAttribute('data-target');
-                if(target) appState.navigateTo(target);
+                appState.navigateTo(this.dataset.target);
             });
         });
-        
-        console.log('✅ Scartino Ready!');
-        console.log('🛡️ Admin Panel: Click shield button → admin.html');
     });
+    
+    // Save before leaving
+    window.addEventListener('beforeunload', () => {
+        saveLocalData(appState.data);
+        appState.saveData();
+    });
+    
+    // Telegram back button
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.BackButton.onClick(() => {
+            saveLocalData(appState.data);
+            appState.saveData();
+        });
+    }
 </script>
 
 </body>
-</html>
+	</html>
