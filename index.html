@@ -635,7 +635,7 @@
     
         loadFromFirebase: async function() {
             try {
-                const ref = db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('main');
+                const ref = db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('profile');
                 const snap = await ref.get();
                 if (snap.exists) {
                     const d = snap.data();
@@ -706,7 +706,7 @@
             saveLocalData(this.data);
             if (!this.user || !this.syncPending || !isOnline) return;
             try {
-                await db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('main')
+                await db.collection('artifacts').doc(appId).collection('users').doc(this.user.uid).collection('gamedata').doc('profile')
                     .set({
                         coins: this.data.coins, scn: this.data.scn, energy: this.data.energy,
                         totalCoinsEarned: this.data.totalCoinsEarned, vipLevel: this.data.vipLevel,
@@ -950,4 +950,4 @@
 </script>
 
 </body>
-		</html>
+													</html>
